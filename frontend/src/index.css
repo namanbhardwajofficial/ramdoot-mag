@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+    --color-btn-primary: #292929;
+    --color-highlight: #828283;
+}
+
+@font-face {
+    font-family: 'Delight';
+    src: url('./assets/fonts/delight-extralight.otf') format('opentype');
+    font-weight: 50;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Delight';
+    src: url('./assets/fonts/delight-light.otf') format('opentype');
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Delight';
+    src: url('./assets/fonts/delight-regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Delight';
+    src: url('./assets/fonts/delight-medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Delight';
+    src: url('./assets/fonts/delight-bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Delight', sans-serif;
+}
