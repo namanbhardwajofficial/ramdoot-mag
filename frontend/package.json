@@ -8,13 +8,17 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@radix-ui/react-avatar": "^1.1.11",
         "@tailwindcss/vite": "^4.1.18",
+        "clsx": "^2.1.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "shadcn": "^3.8.5",
+        "tailwind-merge": "^3.5.0",
         "tailwindcss": "^4.1.18"
     },
     "devDependencies": {
         "@vitejs/plugin-react": "^4.2.1",
-        "vite": "^5.0.8"
+        "vite": "^7.3.1"
     }
 }

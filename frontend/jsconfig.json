@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/componets/*"],
+      "@/lib/*": ["src/lib/*"]
+    }
+  },
+  "include": ["src"]
+}
