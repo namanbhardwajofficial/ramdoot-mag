@@ -13,7 +13,7 @@ export default function Nav() {
 
     return (
         <aside
-            className="w-64 bg-[#f0eeef]  border-slate-200 h-screen flex flex-col justify-between"
+            className="w-84 bg-[#f0eeef]  border-slate-200 h-screen flex flex-col justify-between"
             aria-label="Primary Navigation"
         >
             <div className="px-6 pt-6">
