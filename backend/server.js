@@ -8,6 +8,8 @@ import subscriptionRoutes from './routes/subscriptions.js';
 import paymentRoutes from './routes/payments.js';
 import publicationRoutes from './routes/publications.js';
 import userRoutes from './routes/users.js';
+import influencerRoutes from './routes/influencers.js';
+import campaignRoutes from './routes/campaigns.js';
 import themeRoutes from './routes/theme.js';
 import apiLimiter from './middleware/rateLimiter.js';
 
@@ -105,6 +107,8 @@ app.use('/subscriptions', subscriptionRoutes);
 app.use('/payments', paymentRoutes);
 app.use('/publications', publicationRoutes);
 app.use('/users', userRoutes);
+app.use('/influencers', influencerRoutes);
+app.use('/campaigns', campaignRoutes);
 app.use('/theme', themeRoutes);
 
 const PORT = process.env.PORT || 5000;

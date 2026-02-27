@@ -170,6 +170,37 @@ const USERS = [
   { id: 'user_6213Qd73', name: 'Atharv Kelwadkar', email: 'atharv@ramdootfoundation.com', phone: '+91 9136840260', role: 'User', status: USER_STATUSES.ACTIVE, subscription: 'Paid', subscriptionPlan: 'Monthly @ \u20B949', lastPaid: '12 Sep 2025', totalSpent: 40000, lastActive: '24 days ago', joinedOn: '2020-09-08T00:00:00Z' },
 ];
 
+const INFLUENCER_STATUSES = {
+  ACTIVE: 'active',
+  SUSPENDED: 'suspended',
+  BLOCKED: 'blocked',
+  INACTIVE: 'inactive',
+};
+
+const CAMPAIGN_STATUSES = {
+  ACTIVE: 'active',
+  SUSPENDED: 'suspended',
+  PAUSED: 'paused',
+  COMPLETED: 'completed',
+};
+
+const PLATFORMS = ['Instagram', 'Facebook', "What's app"];
+
+const INFLUENCERS = [
+  { id: 'inf_81t4109', name: 'Influencer Name 1', realName: 'Prakjta Kholi', email: 'atharv@squidcrew.com', phone: '+91 9136840260', status: INFLUENCER_STATUSES.ACTIVE, activeCampaigns: 2, platforms: ['Instagram', 'Facebook'], totalEarning: 33294, roi: '80%', joinedOn: '2024-09-12T00:00:00Z', paymentModel: 'Revenue Share', commission: '20%', totalEarned: 124000, totalPaid: 96000, pendingAmount: 29000, nextPayout: 30, paymentStatus: 'pending', bankInfo: { holderName: 'Prakjta vishal Kholi', bankName: 'HDFC Bank', accountNumber: '**** 4321', ifsc: 'HDFC0001245', location: 'Vasai, Mumbai' } },
+  { id: 'inf_81t4110', name: 'Influencer Name 2', realName: 'Aman Sharma', email: 'aman@squidcrew.com', phone: '+91 9136840261', status: INFLUENCER_STATUSES.ACTIVE, activeCampaigns: 1, platforms: ['Instagram', "What's app"], totalEarning: 10900, roi: '102%', joinedOn: '2024-08-15T00:00:00Z', paymentModel: 'Revenue Share', commission: '15%', totalEarned: 58000, totalPaid: 42000, pendingAmount: 16000, nextPayout: 15, paymentStatus: 'active', bankInfo: { holderName: 'Aman Sharma', bankName: 'ICICI Bank', accountNumber: '**** 5678', ifsc: 'ICIC0001234', location: 'Andheri, Mumbai' } },
+  { id: 'inf_81t4111', name: 'Influencer Name 3', realName: 'Neha Patel', email: 'neha@squidcrew.com', phone: '+91 9136840262', status: INFLUENCER_STATUSES.ACTIVE, activeCampaigns: 10, platforms: ['Facebook', "What's app"], totalEarning: 42000, roi: '890%', joinedOn: '2024-07-01T00:00:00Z', paymentModel: 'Revenue Share', commission: '20%', totalEarned: 200000, totalPaid: 158000, pendingAmount: 42000, nextPayout: 7, paymentStatus: 'pending', bankInfo: { holderName: 'Neha Patel', bankName: 'SBI', accountNumber: '**** 9012', ifsc: 'SBIN0001234', location: 'Thane, Mumbai' } },
+  { id: 'inf_81t4112', name: 'Influencer Name 4', realName: 'Ravi Kumar', email: 'ravi@squidcrew.com', phone: '+91 9136840263', status: INFLUENCER_STATUSES.ACTIVE, activeCampaigns: 0, platforms: ['Instagram'], totalEarning: 0, roi: '0%', joinedOn: '2024-11-01T00:00:00Z', paymentModel: 'Revenue Share', commission: '10%', totalEarned: 0, totalPaid: 0, pendingAmount: 0, nextPayout: 0, paymentStatus: 'active', bankInfo: { holderName: 'Ravi Kumar', bankName: 'Axis Bank', accountNumber: '**** 3456', ifsc: 'UTIB0001234', location: 'Pune' } },
+  { id: 'inf_81t4113', name: 'Influencer Name 5', realName: 'Sneha Joshi', email: 'sneha@squidcrew.com', phone: '+91 9136840264', status: INFLUENCER_STATUSES.ACTIVE, activeCampaigns: 3, platforms: ["What's app"], totalEarning: 43000, roi: '200%', joinedOn: '2024-06-10T00:00:00Z', paymentModel: 'Revenue Share', commission: '20%', totalEarned: 86000, totalPaid: 63000, pendingAmount: 23000, nextPayout: 20, paymentStatus: 'pending', bankInfo: { holderName: 'Sneha Joshi', bankName: 'Kotak Bank', accountNumber: '**** 7890', ifsc: 'KKBK0001234', location: 'Bandra, Mumbai' } },
+];
+
+const CAMPAIGNS = [
+  { id: 'camp_27087210', name: 'Campaign Name 1', influencerId: 'inf_81t4109', influencerName: 'Influencer 1', startingDate: '2025-01-22T00:00:00Z', endDate: '2025-09-30T00:00:00Z', totalClicks: 2128, clickConversion: 200, conversions: '20%', status: CAMPAIGN_STATUSES.ACTIVE, commissionEarned: 12000, totalRevenue: 12000, platforms: ['Instagram', 'Facebook', "What's app"], createdBy: 'Admin', email: 'atharv@squidcrew.com' },
+  { id: 'camp_27087211', name: 'Campaign Name 2', influencerId: 'inf_81t4109', influencerName: 'Influencer 1', startingDate: '2025-01-20T00:00:00Z', endDate: '2025-08-31T00:00:00Z', totalClicks: 382, clickConversion: 102, conversions: '10%', status: CAMPAIGN_STATUSES.SUSPENDED, commissionEarned: 1400, totalRevenue: 1400, platforms: ['Instagram'], createdBy: 'Admin', email: 'atharv@squidcrew.com' },
+  { id: 'camp_27087212', name: 'Campaign Name 3', influencerId: 'inf_81t4111', influencerName: 'Influencer 1', startingDate: '2025-01-24T00:00:00Z', endDate: '2025-07-31T00:00:00Z', totalClicks: 1021, clickConversion: 783, conversions: '15%', status: CAMPAIGN_STATUSES.PAUSED, commissionEarned: 9280, totalRevenue: 9280, platforms: ['Facebook'], createdBy: 'Admin', email: 'neha@squidcrew.com' },
+  { id: 'camp_27087213', name: 'Campaign Name 4', influencerId: 'inf_81t4113', influencerName: 'Influencer 1', startingDate: '2025-01-26T00:00:00Z', endDate: '2025-06-30T00:00:00Z', totalClicks: 122, clickConversion: 19, conversions: '5%', status: CAMPAIGN_STATUSES.COMPLETED, commissionEarned: 1000, totalRevenue: 1000, platforms: ["What's app"], createdBy: 'Admin', email: 'sneha@squidcrew.com' },
+];
+
 const TAX_RATE = 0.18;
 
 const MAGAZINES = [
@@ -234,6 +265,11 @@ export {
   WEEKLY_CHART,
   USER_STATUSES,
   USERS,
+  INFLUENCER_STATUSES,
+  CAMPAIGN_STATUSES,
+  PLATFORMS,
+  INFLUENCERS,
+  CAMPAIGNS,
   TAX_RATE,
   MAGAZINES,
   MONTHLY_REVENUE,
