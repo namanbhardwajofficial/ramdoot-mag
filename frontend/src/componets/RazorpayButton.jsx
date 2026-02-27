@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+import { BACKEND_URL, RAZORPAY_KEY_ID, ORG } from "@/config/constants";
 
 const loadRazorpay = () =>
   new Promise((resolve) => {
@@ -15,7 +14,7 @@ const loadRazorpay = () =>
 export function useRazorpay() {
   const [loading, setLoading] = useState(false);
 
-  const pay = async ({ amount, title, description }) => {
+  const pay = async ({ magazineId }) => {
     setLoading(true);
 
     const sdkLoaded = await loadRazorpay();
@@ -29,7 +28,7 @@ export function useRazorpay() {
       const orderRes = await fetch(`${BACKEND_URL}/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ magazineId }),
       });
 
       const orderData = await orderRes.json();
@@ -38,22 +37,22 @@ export function useRazorpay() {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "Ramdoot Foundation",
-        description: description || title,
+        name: ORG.name,
+        description: orderData.magazineTitle,
         order_id: orderData.orderId,
         handler: async (response) => {
           const verifyRes = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
+            body: JSON.stringify({ ...response, magazineId }),
           });
 
           const verifyData = await verifyRes.json();
           if (verifyRes.ok && verifyData.status === "success") {
-            alert("Payment successful!");
+            alert(`Payment successful for ${verifyData.magazineTitle}!`);
           } else {
             alert("Payment verification failed");
           }
@@ -63,7 +62,7 @@ export function useRazorpay() {
           email: "",
           contact: "",
         },
-        theme: { color: "#1e293b" },
+        theme: { color: ORG.theme || "#1e293b" },
       };
 
       const rzp = new window.Razorpay(options);
