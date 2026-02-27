@@ -6,6 +6,7 @@ import Subscriptions from "./pages/subscriptions";
 import Payments from "./pages/payments";
 import Publications from "./pages/publications";
 import Users from "./pages/users";
+import InfluencerCampaigns from "./pages/influencer-campaigns";
 import { useRazorpay } from "./componets/RazorpayButton";
 import { BACKEND_URL } from "./config/constants";
 
@@ -36,6 +37,8 @@ function App() {
         return <Publications />;
       case "users":
         return <Users />;
+      case "influencer-campaigns":
+        return <InfluencerCampaigns />;
       case "magazine":
         return (
           <Magazines

@@ -76,6 +76,27 @@ export const USER_STATUSES = {
   INACTIVE: 'inactive',
 };
 
+// --- Influencer Campaigns ---
+export const INFLUENCER_STATUSES = {
+  ACTIVE: 'active',
+  SUSPENDED: 'suspended',
+  BLOCKED: 'blocked',
+  INACTIVE: 'inactive',
+};
+
+export const CAMPAIGN_STATUSES = {
+  ACTIVE: 'active',
+  SUSPENDED: 'suspended',
+  PAUSED: 'paused',
+  COMPLETED: 'completed',
+};
+
+export const PLATFORM_COLORS = {
+  Instagram:    { bg: 'bg-gradient-to-r from-pink-500 to-orange-400', text: 'text-white' },
+  Facebook:     { bg: 'bg-blue-500', text: 'text-white' },
+  "What's app": { bg: 'bg-emerald-500', text: 'text-white' },
+};
+
 // --- Shared status colors (used across all modules) ---
 export const STATUS_COLORS = {
   active:      { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
@@ -93,4 +114,8 @@ export const STATUS_COLORS = {
   suspended:   { bg: 'bg-red-50',      text: 'text-red-700',     dot: 'bg-red-500'     },
   blocked:     { bg: 'bg-orange-50',   text: 'text-orange-700',  dot: 'bg-orange-500'  },
   inactive:    { bg: 'bg-slate-100',   text: 'text-slate-600',   dot: 'bg-slate-500'   },
+  completed:   { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  pending:     { bg: 'bg-yellow-50',   text: 'text-yellow-700',  dot: 'bg-yellow-500'  },
+  paid:        { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  pause:       { bg: 'bg-orange-50',   text: 'text-orange-700',  dot: 'bg-orange-500'  },
 };
