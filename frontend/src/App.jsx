@@ -60,9 +60,9 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f0eeef]">
+    <div className="flex flex-col md:flex-row min-h-screen bg-[#f0eeef]">
       <Nav activePage={activePage} onNavigate={setActivePage} />
-      <main className="flex-1 p-6 bg-white rounded-2xl border border-slate-200 shadow-sm m-2 overflow-auto">
+      <main className="flex-1 p-2 md:p-6 bg-white rounded-none md:rounded-2xl border border-slate-200 shadow-sm m-0 md:m-2 overflow-auto">
         <ErrorBoundary key={activePage}>
           {renderPage()}
         </ErrorBoundary>
