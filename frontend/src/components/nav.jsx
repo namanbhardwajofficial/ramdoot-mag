@@ -6,6 +6,7 @@ import { NAV_ITEMS } from "@/config/constants";
 const iconMap = {
 	home: HomeIcon,
 	users: UsersIcon,
+	magazine: MagazineIcon,
 	subscriptions: SubscriptionsIcon,
 	'influencer-campaigns': MegaphoneIcon,
 	publications: BookIcon,
@@ -32,7 +33,7 @@ export default function Nav({ activePage, onNavigate }) {
 					<nav className="mt-8 space-y-1" aria-label="Sidebar">
 						{NAV_ITEMS.main.map((item) => {
 							const isActive = item.key === activePage;
-							const Icon = iconMap[item.key] || HomeIcon;
+							const Icon = iconMap[item.key] ;
 							return (
 								<button
 									key={item.key}
@@ -60,7 +61,7 @@ export default function Nav({ activePage, onNavigate }) {
 				<div className="px-6 pb-6">
 					<nav className="space-y-1 mb-4" aria-label="Footer navigation">
 						{NAV_ITEMS.footer.map((item) => {
-							const Icon = iconMap[item.key] || HomeIcon;
+							const Icon = iconMap[item.key] ;
 							return (
 								<button
 									key={item.key}
@@ -158,6 +159,8 @@ function HomeIcon(props) {
 	);
 }
 
+
+
 function UsersIcon(props) {
 	return (
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
@@ -228,6 +231,16 @@ function HelpIcon(props) {
 			<circle cx="12" cy="12" r="10" />
 			<path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
 			<line x1="12" y1="17" x2="12.01" y2="17" />
+		</svg>
+	);
+}
+
+// Magazine icon
+function MagazineIcon(props) {
+	return (
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+			<rect x="4" y="3" width="16" height="18" rx="2" />
+			<path d="M8 7h8M8 11h8M8 15h4" />
 		</svg>
 	);
 }

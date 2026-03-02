@@ -9,12 +9,13 @@ import Users from "./pages/users";
 import InfluencerCampaigns from "./pages/influencer-campaigns";
 import { useRazorpay } from "@/components/RazorpayButton";
 import { BACKEND_URL } from "./config/constants";
+import DUMMY_MAGAZINES from "./data/dummyMagazines";
 
 
 
 function App() {
   const [activePage, setActivePage] = useState("users");
-  const [magazines, setMagazines] = useState([]);
+  const [magazines, setMagazines] = useState(DUMMY_MAGAZINES);
   const [message, setMessage] = useState("");
   const { pay, loading } = useRazorpay();
 
