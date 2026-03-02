@@ -11,6 +11,7 @@ import { useRazorpay } from "@/components/RazorpayButton";
 import { BACKEND_URL } from "./config/constants";
 
 
+
 function App() {
   const [activePage, setActivePage] = useState("users");
   const [magazines, setMagazines] = useState([]);
