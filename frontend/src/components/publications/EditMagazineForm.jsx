@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BACKEND_URL, ORG, PRICING_PLANS } from '@/config/constants';
-import StatusBadge from '@/componets/ui/status-badge';
+import StatusBadge from '@/components/ui/status-badge';
 
 function StepIndicator({ currentStep }) {
   const steps = [

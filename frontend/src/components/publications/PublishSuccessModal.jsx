@@ -1,4 +1,4 @@
-import Modal from '@/componets/ui/modal';
+import Modal from '@/components/ui/modal';
 import { useState } from 'react';
 
 export default function PublishSuccessModal({ open, onClose, shareLink }) {

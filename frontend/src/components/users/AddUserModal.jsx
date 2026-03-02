@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Modal from '@/componets/ui/modal';
+import Modal from '@/components/ui/modal';
 
 export default function AddUserModal({ open, onClose, onSubmit }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'User' });

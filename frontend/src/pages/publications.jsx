@@ -5,18 +5,18 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from '@/componets/ui/breadcrumb';
-import StatCard from '@/componets/ui/stat-card';
-import StatusBadge from '@/componets/ui/status-badge';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/componets/ui/icons';
-import PublishMagazineForm from '@/componets/publications/PublishMagazineForm';
-import MagazineDetailsDrawer from '@/componets/publications/MagazineDetailsDrawer';
-import PublishSuccessModal from '@/componets/publications/PublishSuccessModal';
-import DeleteMagazineDrawer from '@/componets/publications/DeleteMagazineDrawer';
-import EditMagazineForm from '@/componets/publications/EditMagazineForm';
-import EditSuccessModal from '@/componets/publications/EditSuccessModal';
+} from '@/components/ui/breadcrumb';
+import StatCard from '@/components/ui/stat-card';
+import StatusBadge from '@/components/ui/status-badge';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
+import PublishMagazineForm from '@/components/publications/PublishMagazineForm';
+import MagazineDetailsDrawer from '@/components/publications/MagazineDetailsDrawer';
+import PublishSuccessModal from '@/components/publications/PublishSuccessModal';
+import DeleteMagazineDrawer from '@/components/publications/DeleteMagazineDrawer';
+import EditMagazineForm from '@/components/publications/EditMagazineForm';
+import EditSuccessModal from '@/components/publications/EditSuccessModal';
 import usePublications from '@/hooks/usePublications';
 import { ORG, PUBLICATION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';

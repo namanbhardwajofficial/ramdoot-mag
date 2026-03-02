@@ -1,5 +1,5 @@
-import Modal from '@/componets/ui/modal';
-import StatusBanner from '@/componets/ui/status-banner';
+import Modal from '@/components/ui/modal';
+import StatusBanner from '@/components/ui/status-banner';
 
 export default function EditSuccessModal({ open, onClose }) {
   return (

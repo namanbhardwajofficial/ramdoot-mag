@@ -1,6 +1,6 @@
 import React from 'react';
-import Logo from "../components/Logo.jsx";
-import Button from "../components/Button.jsx";
+import Logo from "@/components/Logo.jsx";
+import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.png';
 
 const Login = () => {

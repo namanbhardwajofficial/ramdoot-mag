@@ -1,5 +1,5 @@
-import Drawer from '@/componets/ui/drawer';
-import StatusBadge from '@/componets/ui/status-badge';
+import Drawer from '@/components/ui/drawer';
+import StatusBadge from '@/components/ui/status-badge';
 import { ORG } from '@/config/constants';
 
 function CopyField({ label, value }) {

@@ -7,7 +7,7 @@ import { Breadcrumb,
     BreadcrumbSeparator,
     BreadcrumbEllipsis,
     BreadcrumbList
-} from "@/componets/ui/breadcrumb";
+} from "@/components/ui/breadcrumb";
 
 export default function MagazinesDetails({
     title = "Ramdoot August 2026 Edition",

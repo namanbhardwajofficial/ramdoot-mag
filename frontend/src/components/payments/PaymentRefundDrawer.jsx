@@ -1,5 +1,5 @@
-import Drawer from '@/componets/ui/drawer';
-import StepProgress from '@/componets/ui/step-progress';
+import Drawer from '@/components/ui/drawer';
+import StepProgress from '@/components/ui/step-progress';
 
 const REFUND_STEPS = [
   { title: 'Payment refund requested', description: 'Please provide your name and email' },

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import Nav from "./componets/nav";
-import ErrorBoundary from "./componets/ErrorBoundary";
+import Nav from "@/components/nav";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Magazines from "./pages/magazines";
 import Subscriptions from "./pages/subscriptions";
 import Payments from "./pages/payments";
 import Publications from "./pages/publications";
 import Users from "./pages/users";
 import InfluencerCampaigns from "./pages/influencer-campaigns";
-import { useRazorpay } from "./componets/RazorpayButton";
+import { useRazorpay } from "@/components/RazorpayButton";
 import { BACKEND_URL } from "./config/constants";
 
 function App() {

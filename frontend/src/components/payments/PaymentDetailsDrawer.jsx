@@ -1,4 +1,4 @@
-import Drawer from '@/componets/ui/drawer';
+import Drawer from '@/components/ui/drawer';
 import { ORG } from '@/config/constants';
 
 function Field({ label, value }) {

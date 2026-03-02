@@ -5,14 +5,14 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from '@/componets/ui/breadcrumb';
-import StatCard, { MiniChart } from '@/componets/ui/stat-card';
-import StatusBadge from '@/componets/ui/status-badge';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/componets/ui/icons';
-import DeactivateUserDrawer from '@/componets/users/DeactivateUserDrawer';
-import AddUserModal from '@/componets/users/AddUserModal';
+} from '@/components/ui/breadcrumb';
+import StatCard, { MiniChart } from '@/components/ui/stat-card';
+import StatusBadge from '@/components/ui/status-badge';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
+import DeactivateUserDrawer from '@/components/users/DeactivateUserDrawer';
+import AddUserModal from '@/components/users/AddUserModal';
 import useUsers from '@/hooks/useUsers';
 import { ORG, USER_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';

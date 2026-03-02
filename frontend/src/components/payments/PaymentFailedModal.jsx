@@ -1,4 +1,4 @@
-import Modal from '@/componets/ui/modal';
+import Modal from '@/components/ui/modal';
 import { ORG } from '@/config/constants';
 
 function Field({ label, value }) {

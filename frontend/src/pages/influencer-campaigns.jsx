@@ -5,14 +5,14 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from '@/componets/ui/breadcrumb';
-import StatusBadge from '@/componets/ui/status-badge';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/componets/ui/icons';
-import PlatformBadge from '@/componets/influencers/PlatformBadge';
-import InfluencerDetail from '@/componets/influencers/InfluencerDetail';
-import CampaignDetailsDrawer from '@/componets/influencers/CampaignDetailsDrawer';
+} from '@/components/ui/breadcrumb';
+import StatusBadge from '@/components/ui/status-badge';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
+import PlatformBadge from '@/components/influencers/PlatformBadge';
+import InfluencerDetail from '@/components/influencers/InfluencerDetail';
+import CampaignDetailsDrawer from '@/components/influencers/CampaignDetailsDrawer';
 import useInfluencers from '@/hooks/useInfluencers';
 import { ORG, CAMPAIGN_STATUSES, INFLUENCER_STATUSES } from '@/config/constants';
 

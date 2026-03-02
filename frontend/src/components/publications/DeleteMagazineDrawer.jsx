@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Drawer from '@/componets/ui/drawer';
-import StatusBanner from '@/componets/ui/status-banner';
+import Drawer from '@/components/ui/drawer';
+import StatusBanner from '@/components/ui/status-banner';
 
 export default function DeleteMagazineDrawer({ open, publication, onClose, onDelete }) {
   const [reason, setReason] = useState('');

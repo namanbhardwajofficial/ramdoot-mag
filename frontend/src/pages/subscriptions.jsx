@@ -5,13 +5,13 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from '@/componets/ui/breadcrumb';
-import StatCard from '@/componets/ui/stat-card';
-import StatusBadge from '@/componets/ui/status-badge';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import Modal from '@/componets/ui/modal';
-import { EyeIcon, TrashIcon, PenIcon } from '@/componets/ui/icons';
+} from '@/components/ui/breadcrumb';
+import StatCard from '@/components/ui/stat-card';
+import StatusBadge from '@/components/ui/status-badge';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import Modal from '@/components/ui/modal';
+import { EyeIcon, TrashIcon, PenIcon } from '@/components/ui/icons';
 import useSubscriptions from '@/hooks/useSubscriptions';
 import { ORG, SUBSCRIPTION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';

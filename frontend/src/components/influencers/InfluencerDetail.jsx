@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import StatusBadge from '@/componets/ui/status-badge';
-import StatCard, { MiniChart } from '@/componets/ui/stat-card';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import { EyeIcon, TrashIcon } from '@/componets/ui/icons';
+import StatusBadge from '@/components/ui/status-badge';
+import StatCard, { MiniChart } from '@/components/ui/stat-card';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import { EyeIcon, TrashIcon } from '@/components/ui/icons';
 import { BACKEND_URL, ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import Drawer from '@/componets/ui/drawer';
-import StatusBanner from '@/componets/ui/status-banner';
+import Drawer from '@/components/ui/drawer';
+import StatusBanner from '@/components/ui/status-banner';
 import { BACKEND_URL, ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 

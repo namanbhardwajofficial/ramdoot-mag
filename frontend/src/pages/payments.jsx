@@ -5,17 +5,17 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from '@/componets/ui/breadcrumb';
-import StatCard from '@/componets/ui/stat-card';
-import StatusBadge from '@/componets/ui/status-badge';
-import DataTable from '@/componets/ui/data-table';
-import Toolbar from '@/componets/ui/toolbar';
-import { EyeIcon } from '@/componets/ui/icons';
-import PaymentsChart from '@/componets/payments/PaymentsChart';
-import PaymentDetailsDrawer from '@/componets/payments/PaymentDetailsDrawer';
-import PaymentFailedModal from '@/componets/payments/PaymentFailedModal';
-import PaymentRefundDrawer from '@/componets/payments/PaymentRefundDrawer';
-import InfluencerPayoutDrawer from '@/componets/payments/InfluencerPayoutDrawer';
+} from '@/components/ui/breadcrumb';
+import StatCard from '@/components/ui/stat-card';
+import StatusBadge from '@/components/ui/status-badge';
+import DataTable from '@/components/ui/data-table';
+import Toolbar from '@/components/ui/toolbar';
+import { EyeIcon } from '@/components/ui/icons';
+import PaymentsChart from '@/components/payments/PaymentsChart';
+import PaymentDetailsDrawer from '@/components/payments/PaymentDetailsDrawer';
+import PaymentFailedModal from '@/components/payments/PaymentFailedModal';
+import PaymentRefundDrawer from '@/components/payments/PaymentRefundDrawer';
+import InfluencerPayoutDrawer from '@/components/payments/InfluencerPayoutDrawer';
 import usePayments from '@/hooks/usePayments';
 import { ORG, PAYMENT_STATUSES, PAYOUT_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';

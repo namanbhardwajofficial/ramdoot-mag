@@ -1,11 +1,11 @@
-import Card from "@/componets/card";
+import Card from "@/components/card";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbList,
-} from "@/componets/ui/breadcrumb";
+} from "@/components/ui/breadcrumb";
 
 export default function Magazines({ magazines, handleBuy, loading, message }) {
   return (

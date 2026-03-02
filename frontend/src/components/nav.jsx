@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/componets/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NAV_ITEMS } from "@/config/constants";
 
 const iconMap = {
