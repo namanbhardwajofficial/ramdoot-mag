@@ -22,7 +22,7 @@ export default function Magazines({ magazines, handleBuy, loading, message }) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <header className="flex items-start justify-between mb-6">
+      <header className="flex flex-col sm:flex-row justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Magazines</h1>
           <p className="text-sm text-slate-500">
