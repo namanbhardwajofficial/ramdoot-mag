@@ -16,6 +16,7 @@ import AddUserModal from '@/components/users/AddUserModal';
 import useUsers from '@/hooks/useUsers';
 import { ORG, USER_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+import Button from "@/components/Button.jsx";
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -195,10 +196,7 @@ export default function Users() {
           <h1 className="text-2xl font-bold mb-1">Users</h1>
           <p className="text-sm text-slate-500">You will find everything about users in this platform.</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800">
-          Add User
-          <ChevronRightIcon />
-        </button>
+        <Button text='Add User' handler={() => setShowAddModal(true)} />
       </header>
 
       {/* Stats Row 1 — 3 big cards */}

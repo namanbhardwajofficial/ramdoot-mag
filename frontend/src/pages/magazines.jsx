@@ -6,6 +6,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
+import { RiHome6Line } from "react-icons/ri";
 
 export default function Magazines({ magazines, handleBuy, loading, message }) {
   return (
@@ -13,7 +14,7 @@ export default function Magazines({ magazines, handleBuy, loading, message }) {
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            <BreadcrumbLink href="/"><RiHome6Line size={15} opacity="50%" /></BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

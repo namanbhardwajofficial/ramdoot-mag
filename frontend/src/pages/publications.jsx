@@ -20,6 +20,7 @@ import EditSuccessModal from '@/components/publications/EditSuccessModal';
 import usePublications from '@/hooks/usePublications';
 import { ORG, PUBLICATION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+import Button from "@/components/Button.jsx";
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -227,10 +228,7 @@ export default function Publications() {
           <h1 className="text-2xl font-bold mb-1">Magazine Publications</h1>
           <p className="text-sm text-slate-500">You will find everything about users in this platform.</p>
         </div>
-        <button onClick={() => setView(VIEWS.PUBLISH)} className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800">
-          Publish New Magazine
-          <ChevronRightIcon />
-        </button>
+        <Button text='Publish New Magazine' handler={() => setView(VIEWS.PUBLISH)} />
       </header>
 
       <div className="flex gap-4 mb-8 flex-wrap">
