@@ -15,7 +15,7 @@ export const NAV_ITEMS = {
   main: [
     { key: 'home',                 label: 'Home' },
     { key: 'users',                label: 'Users' },
-    { key: 'magazine',              label: 'Magazine' },
+    { key: 'magazines',              label: 'Magazine' },
     { key: 'subscriptions',        label: 'Subscriptions' },
     { key: 'influencer-campaigns', label: 'Influencers Campaigns' },
     { key: 'publications',         label: 'Publications' },

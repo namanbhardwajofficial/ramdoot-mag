@@ -7,8 +7,12 @@ import {
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import { RiHome6Line } from "react-icons/ri";
+import {useLoaderData} from "react-router";
 
-export default function Magazines({ magazines, handleBuy, loading, message }) {
+export default function Magazines({ handleBuy, loading, message }) {
+
+  let magazines = useLoaderData();
+
   return (
     <>
       <Breadcrumb className="mb-4">

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Drawer from "@/components/ui/drawer";
 import { NAV_ITEMS } from "@/config/constants";
+import {Link} from "react-router";
 
 const iconMap = {
 	home: HomeIcon,
 	users: UsersIcon,
-	magazine: MagazineIcon,
+	magazines: MagazineIcon,
 	subscriptions: SubscriptionsIcon,
 	'influencer-campaigns': MegaphoneIcon,
 	publications: BookIcon,
@@ -35,12 +36,9 @@ export default function Nav({ activePage, onNavigate }) {
 							const isActive = item.key === activePage;
 							const Icon = iconMap[item.key] ;
 							return (
-								<button
+								<Link
 									key={item.key}
-									onClick={() => {
-										onNavigate(item.key);
-										if (onClose) onClose();
-									}}
+									to={item.key}
 									className={`group w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-left transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 ${
 										isActive
 											? "bg-white text-slate-900 font-medium shadow-sm"
@@ -52,7 +50,7 @@ export default function Nav({ activePage, onNavigate }) {
 										<Icon aria-hidden />
 									</span>
 									<span className="flex-1">{item.label}</span>
-								</button>
+								</Link>
 							);
 						})}
 					</nav>

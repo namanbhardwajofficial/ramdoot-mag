@@ -10,6 +10,7 @@ import InfluencerCampaigns from "./pages/influencer-campaigns";
 import { useRazorpay } from "@/components/RazorpayButton";
 import { BACKEND_URL } from "./config/constants";
 import DUMMY_MAGAZINES from "./data/dummyMagazines";
+import {Outlet} from "react-router";
 
 
 
@@ -19,12 +20,12 @@ function App() {
   const [message, setMessage] = useState("");
   const { pay, loading } = useRazorpay();
 
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/magazines`)
-      .then((res) => res.json())
-      .then(setMagazines)
-      .catch((err) => console.error("Failed to fetch magazines", err));
-  }, []);
+  // useEffect(() => {
+  //   fetch(`${BACKEND_URL}/magazines`)
+  //     .then((res) => res.json())
+  //     .then(setMagazines)
+  //     .catch((err) => console.error("Failed to fetch magazines", err));
+  // }, []);
 
   function handleBuy(magazine) {
     pay({ magazineId: magazine.id });
@@ -65,7 +66,7 @@ function App() {
       <Nav activePage={activePage} onNavigate={setActivePage} />
       <main className="flex-1 p-2 md:p-6 bg-white rounded-none md:rounded-2xl border border-slate-200 shadow-sm m-0 md:m-2 overflow-auto">
         <ErrorBoundary key={activePage}>
-          {renderPage()}
+          <Outlet />
         </ErrorBoundary>
       </main>
     </div>
