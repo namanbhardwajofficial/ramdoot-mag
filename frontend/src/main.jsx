@@ -5,12 +5,13 @@ import "./index.css";
 import {createBrowserRouter} from "react-router";
 import {RouterProvider} from "react-router/dom";
 import Login from "./pages/Login.jsx";
-import Users from "./pages/users.jsx"
-import Magazines from "@/pages/magazines.jsx";
-import Subscriptions from "@/pages/subscriptions.jsx";
-import InfluencerCampaigns from "@/pages/influencer-campaigns.jsx";
-import Payments from "@/pages/payments.jsx";
-import Publications from "@/pages/publications.jsx";
+import Users from "./pages/admin/users.jsx"
+import Magazines from "@/pages/admin/magazines.jsx";
+import Subscriptions from "@/pages/admin/subscriptions.jsx";
+import InfluencerCampaigns from "@/pages/admin/influencer-campaigns.jsx";
+import Payments from "@/pages/admin/payments.jsx";
+import Publications from "@/pages/admin/publications.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx"
 import {BACKEND_URL} from "@/config/constants.js";
 import dummyMagazines from "@/data/dummyMagazines.js";
 
@@ -19,7 +20,7 @@ const router = createBrowserRouter([
         path: "/",
         element: <App />,
         children: [
-            { index: true, element: <Users /> },
+            { path: "home", element: <AdminDashboard /> },
             { path: "users", element: <Users /> },
             { path: "magazines",
               element: <Magazines /> ,

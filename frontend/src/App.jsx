@@ -1,71 +1,23 @@
-import { useState, useEffect } from "react";
 import Nav from "@/components/nav";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import Magazines from "./pages/magazines";
-import Subscriptions from "./pages/subscriptions";
-import Payments from "./pages/payments";
-import Publications from "./pages/publications";
-import Users from "./pages/users";
-import InfluencerCampaigns from "./pages/influencer-campaigns";
-import { useRazorpay } from "@/components/RazorpayButton";
-import { BACKEND_URL } from "./config/constants";
-import DUMMY_MAGAZINES from "./data/dummyMagazines";
-import {Outlet} from "react-router";
-
-
+import { Outlet, useLocation, useNavigate } from "react-router";
 
 function App() {
-  const [activePage, setActivePage] = useState("users");
-  const [magazines, setMagazines] = useState(DUMMY_MAGAZINES);
-  const [message, setMessage] = useState("");
-  const { pay, loading } = useRazorpay();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   fetch(`${BACKEND_URL}/magazines`)
-  //     .then((res) => res.json())
-  //     .then(setMagazines)
-  //     .catch((err) => console.error("Failed to fetch magazines", err));
-  // }, []);
-
-  function handleBuy(magazine) {
-    pay({ magazineId: magazine.id });
-  }
-
-  function renderPage() {
-    switch (activePage) {
-      case "subscriptions":
-        return <Subscriptions />;
-      case "payments":
-        return <Payments />;
-      case "publications":
-        return <Publications />;
-      case "users":
-        return <Users />;
-      case "influencer-campaigns":
-        return <InfluencerCampaigns />;
-      case "magazine":
-        return (
-          <Magazines
-            magazines={magazines}
-            handleBuy={handleBuy}
-            loading={loading}
-            message={message}
-          />
-        );
-      default:
-        return (
-          <div className="flex items-center justify-center h-full text-slate-400">
-            <p className="text-lg">{activePage.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} — Coming soon</p>
-          </div>
-        );
-    }
-  }
+  const activePage =
+    location.pathname.split("/")[1] || "users";
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#f0eeef]">
-      <Nav activePage={activePage} onNavigate={setActivePage} />
+      <Nav
+        activePage={activePage}
+        onNavigate={(page) => navigate(`/${page}`)}
+      />
+
       <main className="flex-1 p-2 md:p-6 bg-white rounded-none md:rounded-2xl border border-slate-200 shadow-sm m-0 md:m-2 overflow-auto">
-        <ErrorBoundary key={activePage}>
+        <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>

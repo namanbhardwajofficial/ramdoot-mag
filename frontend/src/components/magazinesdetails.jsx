@@ -105,10 +105,10 @@ export default function MagazinesDetails({
                                 <iframe
                                     src={pdfUrl}
                                     title={title}
-                                    className="w-full h-[600px] rounded-lg border border-slate-200"
+                                    className="w-full h-150 rounded-lg border border-slate-200"
                                 />
                             ) : (
-                                <div className="w-full h-[600px] rounded-lg border border-slate-200 overflow-hidden">
+                                <div className="w-full h-150 rounded-lg border border-slate-200 overflow-hidden">
                                     {cover ? (
                                         <img src={cover} alt={title} className="w-full h-full object-cover" />
                                     ) : (
