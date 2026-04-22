@@ -14,6 +14,7 @@ import Publications from "@/pages/admin/publications.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx"
 import {BACKEND_URL} from "@/config/constants.js";
 import dummyMagazines from "@/data/dummyMagazines.js";
+import InfluencerDashboard from "./pages/influencers/InfluencerDashboard.jsx"
 
 const router = createBrowserRouter([
     {
@@ -43,6 +44,13 @@ const router = createBrowserRouter([
     {
         path: "login",
         element: <Login />
+    },
+    {
+        path: "influencer",
+        element: <App />,
+        children: [
+            { index: true, element: <InfluencerDashboard />}
+        ]
     }
 ]);
 
