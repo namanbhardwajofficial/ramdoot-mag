@@ -213,7 +213,7 @@ export default function Users() {
           color={CHART_COLORS.success}
           trend="up"
         />
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium text-slate-700">Paid Users</span>
             <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
@@ -230,14 +230,14 @@ export default function Users() {
 
       {/* Stats Row 2 — 2 smaller cards */}
       <div className="flex gap-4 mb-8 flex-wrap">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Churned Users</span>
           <div className="text-3xl font-bold text-slate-900 mt-2">
             {(stats?.churnedUsers ?? 0).toLocaleString('en-IN')}
           </div>
           <MiniChart color={CHART_COLORS.danger} trend="down" />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Inactive Users</span>
           <div className="text-3xl font-bold text-slate-900 mt-2">
             {(stats?.inactiveUsers ?? 0).toLocaleString('en-IN')}

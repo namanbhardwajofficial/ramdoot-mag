@@ -106,7 +106,7 @@ export default function AdminDashboard() {
              <Button text="Create Campaigns" variant="primary" />
           </div>
         </div>
-        <div className="h-[300px] w-full">
+        <div className="h-75 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={campaignData}>
               <defs>
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
               <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Live</span>
             </div>
             <div className="flex justify-center mb-6">
-               <div className="relative w-32 h-32 flex items-center justify-center rounded-full border-[10px] border-slate-100 border-t-indigo-500 border-l-indigo-300">
+               <div className="relative w-32 h-32 flex items-center justify-center rounded-full border-10 border-slate-100 border-t-indigo-500 border-l-indigo-300">
                   <div className="text-center">
                     <div className="text-sm font-bold text-slate-900 leading-tight">1.2M</div>
                     <div className="text-[10px] text-slate-400">Total</div>

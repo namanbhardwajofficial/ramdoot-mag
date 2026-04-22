@@ -96,7 +96,7 @@ export default function InfluencerCampaigns() {
   ];
 
   const campaignColumns = [
-    { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800 truncate max-w-[100px] block">{v}</span> },
+    { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800 truncate max-w-25 block">{v}</span> },
     { key: 'influencerName', label: 'Influencer Name' },
     { key: 'startingDate', label: 'Starting Date', render: (v) => formatDate(v) },
     { key: 'totalClicks', label: 'Total Clicks', render: (v) => v?.toLocaleString('en-IN') },

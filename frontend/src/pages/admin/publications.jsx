@@ -233,11 +233,11 @@ export default function Publications() {
 
       <div className="flex gap-4 mb-8 flex-wrap">
         <StatCard title="Total Readers" value={stats?.totalReaders ?? 0} color={CHART_COLORS.success} trend="up" changeLabel="+ 100% vs last month" changeColor="text-emerald-600" />
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Total Publications</span>
           <div className="text-3xl font-bold text-slate-900 mt-3">{stats?.totalPublications ?? 0}</div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Live Promo Code & Drafts</span>
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between">
