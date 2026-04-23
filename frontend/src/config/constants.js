@@ -11,20 +11,33 @@ export const ORG = {
 };
 
 // --- Navigation ---
-export const NAV_ITEMS = {
+export const ADMIN_NAV = {
   main: [
-    { key: 'home',                 label: 'Home' },
-    { key: 'users',                label: 'Users' },
-    { key: 'magazines',              label: 'Magazine' },
-    { key: 'subscriptions',        label: 'Subscriptions' },
-    { key: 'influencer-campaigns', label: 'Influencers Campaigns' },
-    { key: 'publications',         label: 'Publications' },
-    { key: 'payments',             label: 'Payments' },
-    { key: 'security',             label: 'Security' },
+    { key: "home", label: "Home" },
+    { key: "users", label: "Users" },
+    { key: "magazines", label: "Magazine" },
+    { key: "subscriptions", label: "Subscriptions" },
+    { key: "influencer-campaigns", label: "Influencers Campaigns" },
+    { key: "publications", label: "Publications" },
+    { key: "payments", label: "Payments" },
   ],
+
   footer: [
-    { key: 'settings', label: 'Settings' },
-    { key: 'help',     label: 'Help' },
+    { key: "settings", label: "Settings" },
+    { key: "help", label: "Help" },
+  ],
+};
+
+export const INFLUENCER_NAV = {
+  main: [
+    { key: "home", label: "Home" },
+    { key: "earnings", label: "Earnings" },
+    { key: "subscriptions", label: "Subscriptions" },
+  ],
+
+  footer: [
+    { key: "settings", label: "Settings" },
+    { key: "help", label: "Help" },
   ],
 };
 

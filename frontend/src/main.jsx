@@ -15,12 +15,15 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx"
 import {BACKEND_URL} from "@/config/constants.js";
 import dummyMagazines from "@/data/dummyMagazines.js";
 import InfluencerDashboard from "./pages/influencers/InfluencerDashboard.jsx"
+import AdminLayout from "./layouts/adminLayout.jsx";
+import InfluencerLayout from "./layouts/InfluencerLayout.jsx";
 
 const router = createBrowserRouter([
     {
-        path: "/",
-        element: <App />,
+        path: "admin",
+        element: <AdminLayout />,
         children: [
+            { index: true, element: <AdminDashboard /> },
             { path: "home", element: <AdminDashboard /> },
             { path: "users", element: <Users /> },
             { path: "magazines",
@@ -47,7 +50,7 @@ const router = createBrowserRouter([
     },
     {
         path: "influencer",
-        element: <App />,
+        element: <InfluencerLayout />,
         children: [
             { index: true, element: <InfluencerDashboard />}
         ]
