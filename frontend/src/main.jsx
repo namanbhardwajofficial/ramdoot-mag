@@ -17,6 +17,7 @@ import dummyMagazines from "@/data/dummyMagazines.js";
 import InfluencerDashboard from "./pages/influencers/InfluencerDashboard.jsx"
 import AdminLayout from "./layouts/adminLayout.jsx";
 import InfluencerLayout from "./layouts/InfluencerLayout.jsx";
+import Signup from "./pages/Signup.jsx";
 
 const router = createBrowserRouter([
     {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
     {
         path: "login",
         element: <Login />
+    },
+    {
+        path: "signup",
+        element: <Signup />
     },
     {
         path: "influencer",

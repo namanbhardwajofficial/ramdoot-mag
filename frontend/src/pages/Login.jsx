@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.png';
@@ -79,7 +80,7 @@ const Login = () => {
                     
                     <div className="flex justify-center gap-2 items-center">
                         <p className="font-light tracking-wide text-black/60 lg:text-highlight/80 text-sm">Don't have an account?</p>
-                        <p className="font-bold lg:font-medium cursor-pointer hover:underline text-black lg:text-black">Sign up</p>
+                        <Link to="/signup" className="font-bold lg:font-medium cursor-pointer hover:underline text-black lg:text-black">Sign up</Link>
                     </div>
                 </div>
 
