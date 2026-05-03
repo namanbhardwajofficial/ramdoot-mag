@@ -1,11 +1,42 @@
-import React from 'react';
-import { Link } from 'react-router';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.png';
 import { FiHelpCircle, FiEye } from "react-icons/fi";
+import { BACKEND_URL } from '@/config/constants';
 
 const Login = () => {
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleLogin = async (e) => {
+        if (e) e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Login failed');
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            navigate('/admin'); // Redirect to dashboard
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <section className="min-h-screen lg:max-h-screen lg:p-5 w-full flex flex-col lg:flex-row lg:gap-3 overflow-hidden max-w-375 mx-auto bg-[#f8f9fa] lg:bg-transparent">
             {/* Image Container (Top on Mobile, Right on Desktop) */}
@@ -50,10 +81,18 @@ const Login = () => {
                         Login & access your account to read more about history.
                     </p>
                     
+                    {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
+
                     <div className="my-4 lg:my-5 flex flex-col gap-2">
                         <label className="text-sm lg:text-base font-medium">Email *</label>
                         <div className="relative flex items-center">
-                            <input type="text" className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="atharv@ramdootfoundation.com" />
+                            <input 
+                                type="text" 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                placeholder="atharv@ramdootfoundation.com" 
+                            />
                             <FiHelpCircle className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                         </div>
                     </div>
@@ -61,7 +100,13 @@ const Login = () => {
                     <div className="my-4 lg:my-5 flex flex-col gap-2">
                         <label className="text-sm lg:text-base font-medium">Password *</label>
                         <div className="relative flex items-center">
-                            <input type="password" className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="*********" />
+                            <input 
+                                type="password" 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                placeholder="*********" 
+                            />
                             <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                         </div>
                     </div>
@@ -75,7 +120,7 @@ const Login = () => {
                     </div>
                     
                     <div className="my-6 lg:my-5">
-                        <Button text="Login" width="100%" />
+                        <Button text={loading ? "Logging in..." : "Login"} width="100%" handler={handleLogin} />
                     </div>
                     
                     <div className="flex justify-center gap-2 items-center">

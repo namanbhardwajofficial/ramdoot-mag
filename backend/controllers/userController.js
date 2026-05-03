@@ -1,6 +1,7 @@
-import { USER_STATUSES, USERS } from '../config/magazines.js';
+import { USER_STATUSES } from '../config/magazines.js';
+import db from '../lib/db.js';
 
-const users = [...USERS];
+const users = db.getUsers();
 let nextId = users.length + 1;
 
 export function getStats(_req, res) {

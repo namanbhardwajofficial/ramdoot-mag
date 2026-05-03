@@ -1,12 +1,16 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate, Link } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.png';
 import { FiHelpCircle, FiEye, FiRefreshCw, FiChevronDown, FiChevronLeft } from "react-icons/fi";
-import { Link } from 'react-router';
+import { BACKEND_URL } from '@/config/constants';
 
 const Signup = () => {
+    const navigate = useNavigate();
     const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const otpRefs = useRef([]);
     const [formData, setFormData] = useState({
         fullName: '',
@@ -18,12 +22,79 @@ const Signup = () => {
         otp: ['', '', '', '', '', '']
     });
 
-    const handleNext = () => {
-        if (step < 3) setStep(step + 1);
+    const handleNext = async () => {
+        if (step === 2) {
+            // Validate step 2
+            if (!formData.password || formData.password !== formData.confirmPassword) {
+                setError('Passwords do not match or are empty');
+                return;
+            }
+
+            // Moving to OTP step
+            setLoading(true);
+            setError('');
+            try {
+                const res = await fetch(`${BACKEND_URL}/auth/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: formData.email })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+                setStep(3);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        } else if (step === 1) {
+             // Basic validation for step 1
+             if (!formData.fullName || !formData.email || !formData.phoneNo) {
+                setError('Please fill all required fields');
+                return;
+            }
+            setError('');
+            setStep(2);
+        } else if (step < 3) {
+            setStep(step + 1);
+        }
     };
 
     const handleBack = () => {
-        if (step > 1) setStep(step - 1);
+        if (step > 1) {
+            setError('');
+            setStep(step - 1);
+        }
+    };
+
+    const handleSignup = async () => {
+        setLoading(true);
+        setError('');
+        const otpString = formData.otp.join('');
+        
+        try {
+            const res = await fetch(`${BACKEND_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    phone: formData.phoneNo,
+                    password: formData.password,
+                    otp: otpString 
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Signup failed');
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            navigate('/admin');
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleOtpChange = (index, value) => {
@@ -97,30 +168,50 @@ const Signup = () => {
                         <span className={`w-8 h-1 block rounded-full transition-colors ${step >= 2 ? 'bg-[#3d3d3d]' : 'bg-[#e5e5e5]'}`}></span>
                         <span className={`w-8 h-1 block rounded-full transition-colors ${step >= 3 ? 'bg-[#3d3d3d]' : 'bg-[#e5e5e5]'}`}></span>
                     </div>
+                    
+                    {error && <p className="text-red-500 text-sm mb-4 font-medium">{error}</p>}
 
                     {/* Step 1 */}
                     {step === 1 && (
                         <div className="flex flex-col gap-4 lg:gap-5 mt-2 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm lg:text-base font-medium">Full Name *</label>
-                                <input type="text" className="border-black/10 border-[1px] p-3 lg:p-2 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="Atharv Kelwadkar" />
+                                <input 
+                                    type="text" 
+                                    value={formData.fullName}
+                                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                                    className="border-black/10 border-[1px] p-3 lg:p-2 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                    placeholder="Atharv Kelwadkar" 
+                                />
                             </div>
                             
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm lg:text-base font-medium">Phone No *</label>
                                 <div className="flex border-black/10 border-[1px] rounded-lg shadow-sm w-full overflow-hidden focus-within:border-black/30 transition-all bg-white">
                                     <div className="flex items-center gap-1 bg-[#f9fafb] px-3 border-r border-black/10 cursor-pointer hover:bg-gray-100 transition-colors">
-                                        <span className="text-sm lg:text-base text-black/70 font-medium">IN</span>
+                                        <span className="text-sm lg:text-base text-black/70 font-medium">{formData.countryCode}</span>
                                         <FiChevronDown className="text-black/50" />
                                     </div>
-                                    <input type="text" className="p-3 lg:p-2 w-full outline-none text-sm lg:text-base" placeholder="9136840260" />
+                                    <input 
+                                        type="text" 
+                                        value={formData.phoneNo}
+                                        onChange={(e) => setFormData({...formData, phoneNo: e.target.value})}
+                                        className="p-3 lg:p-2 w-full outline-none text-sm lg:text-base" 
+                                        placeholder="9136840260" 
+                                    />
                                 </div>
                             </div>
                             
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm lg:text-base font-medium">Email *</label>
                                 <div className="relative flex items-center">
-                                    <input type="email" className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="atharv@ramdootfoundation.com" />
+                                    <input 
+                                        type="email" 
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                        className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                        placeholder="atharv@ramdootfoundation.com" 
+                                    />
                                     <FiHelpCircle className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                                 </div>
                             </div>
@@ -133,7 +224,13 @@ const Signup = () => {
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm lg:text-base font-medium">Password *</label>
                                 <div className="relative flex items-center">
-                                    <input type="password" className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="*********" />
+                                    <input 
+                                        type="password" 
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                        className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                        placeholder="*********" 
+                                    />
                                     <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                                 </div>
                             </div>
@@ -141,7 +238,13 @@ const Signup = () => {
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm lg:text-base font-medium">Confirm Password *</label>
                                 <div className="relative flex items-center">
-                                    <input type="password" className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" placeholder="*********" />
+                                    <input 
+                                        type="password" 
+                                        value={formData.confirmPassword}
+                                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                                        className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
+                                        placeholder="*********" 
+                                    />
                                     <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                                 </div>
                             </div>
@@ -192,7 +295,11 @@ const Signup = () => {
                     )}
 
                     <div className="mt-8 mb-4">
-                        <Button text={step === 3 ? "Create Account" : "Next"} width="100%" handler={step === 3 ? () => console.log('Submit', formData) : handleNext} />
+                        <Button 
+                            text={loading ? (step === 3 ? "Creating..." : "Sending OTP...") : (step === 3 ? "Create Account" : "Next")} 
+                            width="100%" 
+                            handler={step === 3 ? handleSignup : handleNext} 
+                        />
                     </div>
 
                     {step > 1 && (
