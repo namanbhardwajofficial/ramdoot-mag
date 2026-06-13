@@ -1,40 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import StatCard from "@/components/ui/stat-card";
+import StatusBadge from "@/components/ui/status-badge";
+import DataTable from "@/components/ui/data-table";
+import Toolbar from "@/components/ui/toolbar";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
-import StatCard from '@/components/ui/stat-card';
-import StatusBadge from '@/components/ui/status-badge';
-import DataTable from '@/components/ui/data-table';
-import Toolbar from '@/components/ui/toolbar';
-import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
-import PublishMagazineForm from '@/components/publications/PublishMagazineForm';
-import MagazineDetailsDrawer from '@/components/publications/MagazineDetailsDrawer';
-import PublishSuccessModal from '@/components/publications/PublishSuccessModal';
-import DeleteMagazineDrawer from '@/components/publications/DeleteMagazineDrawer';
-import EditMagazineForm from '@/components/publications/EditMagazineForm';
-import EditSuccessModal from '@/components/publications/EditSuccessModal';
-import usePublications from '@/hooks/usePublications';
-import { ORG, PUBLICATION_STATUSES } from '@/config/constants';
-import { CHART_COLORS } from '@/config/theme';
+  EyeIcon,
+  TrashIcon,
+  PenIcon,
+  ChevronRightIcon,
+} from "@/components/ui/icons";
+import PublishMagazineForm from "@/components/publications/PublishMagazineForm";
+import MagazineDetailsDrawer from "@/components/publications/MagazineDetailsDrawer";
+import PublishSuccessModal from "@/components/publications/PublishSuccessModal";
+import DeleteMagazineDrawer from "@/components/publications/DeleteMagazineDrawer";
+import EditMagazineForm from "@/components/publications/EditMagazineForm";
+import EditSuccessModal from "@/components/publications/EditSuccessModal";
+import usePublications from "@/hooks/usePublications";
+import { ORG, PUBLICATION_STATUSES } from "@/config/constants";
+import { CHART_COLORS } from "@/config/theme";
 import Button from "@/components/Button.jsx";
+import { toastSuccess } from "@/lib/confirm";
 
 function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-const VIEWS = { DASHBOARD: 'dashboard', LIST: 'list', PUBLISH: 'publish', EDIT: 'edit' };
+const VIEWS = {
+  DASHBOARD: "dashboard",
+  LIST: "list",
+  PUBLISH: "publish",
+  EDIT: "edit",
+};
 
 export default function Publications() {
-  const { publications, stats, loading, init, fetchAll, publish, update, deactivate, remove } = usePublications();
+  const {
+    publications,
+    stats,
+    loading,
+    init,
+    fetchAll,
+    publish,
+    update,
+    deactivate,
+    remove,
+  } = usePublications();
 
   const [view, setView] = useState(VIEWS.DASHBOARD);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [selectedPub, setSelectedPub] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -43,7 +61,9 @@ export default function Publications() {
   const [editSuccess, setEditSuccess] = useState(false);
   const [editPub, setEditPub] = useState(null);
 
-  useEffect(() => { init(); }, [init]);
+  useEffect(() => {
+    init();
+  }, [init]);
 
   useEffect(() => {
     if (!loading) fetchAll({ status: statusFilter, search });
@@ -54,7 +74,9 @@ export default function Publications() {
       const pub = await publish(form);
       setSuccessModal(pub.shareLink);
       setView(VIEWS.DASHBOARD);
-    } catch (err) { console.error('Failed to publish', err); }
+    } catch (err) {
+      console.error("Failed to publish", err);
+    }
   }
 
   async function handleDelete({ reason, note }) {
@@ -63,14 +85,19 @@ export default function Publications() {
       await remove(selectedPub.id);
       setShowDelete(false);
       setSelectedPub(null);
-    } catch (err) { console.error('Failed to delete', err); }
+      toastSuccess("Magazine deleted..");
+    } catch (err) {
+      console.error("Failed to delete", err);
+    }
   }
 
   async function handleDeactivate() {
     if (!selectedPub) return;
     try {
       await deactivate(selectedPub.id);
-    } catch (err) { console.error('Failed to deactivate', err); }
+    } catch (err) {
+      console.error("Failed to deactivate", err);
+    }
   }
 
   async function handleUpdate(form) {
@@ -78,13 +105,15 @@ export default function Publications() {
     try {
       await update(editPub.id, form);
       setEditSuccess(true);
-    } catch (err) { console.error('Failed to update', err); }
+    } catch (err) {
+      console.error("Failed to update", err);
+    }
   }
 
   const columns = [
     {
-      key: 'title',
-      label: 'Magazine Name & ID',
+      key: "title",
+      label: "Magazine Name & ID",
       render: (v, row) => (
         <div>
           <div className="font-medium text-slate-800">{v}</div>
@@ -92,24 +121,62 @@ export default function Publications() {
         </div>
       ),
     },
-    { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
-    { key: 'publishedOn', label: 'Published On', render: (v) => <span className="text-slate-600">{formatDate(v)}</span> },
-    { key: 'subscribers', label: 'Subscribers', render: (v) => v?.toLocaleString('en-IN') },
-    { key: 'reads', label: 'Reads / Views', render: (v) => v?.toLocaleString('en-IN') },
-    { key: 'revenue', label: 'Revenue', render: (v) => `${ORG.currencySymbol}${v?.toLocaleString('en-IN')}` },
     {
-      key: '_actions',
-      label: '',
-      align: 'right',
+      key: "status",
+      label: "Status",
+      render: (v) => <StatusBadge status={v} />,
+    },
+    {
+      key: "publishedOn",
+      label: "Published On",
+      render: (v) => <span className="text-slate-600">{formatDate(v)}</span>,
+    },
+    {
+      key: "subscribers",
+      label: "Subscribers",
+      render: (v) => v?.toLocaleString("en-IN"),
+    },
+    {
+      key: "reads",
+      label: "Reads / Views",
+      render: (v) => v?.toLocaleString("en-IN"),
+    },
+    {
+      key: "revenue",
+      label: "Revenue",
+      render: (v) => `${ORG.currencySymbol}${v?.toLocaleString("en-IN")}`,
+    },
+    {
+      key: "_actions",
+      label: "",
+      align: "right",
       render: (_v, row) => (
         <div className="flex items-center justify-end gap-1">
-          <button onClick={() => { setSelectedPub(row); setShowDetails(true); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+          <button
+            onClick={() => {
+              setSelectedPub(row);
+              setShowDetails(true);
+            }}
+            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+          >
             <EyeIcon />
           </button>
-          <button onClick={() => { setSelectedPub(row); setShowDelete(true); }} className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600">
+          <button
+            onClick={() => {
+              setSelectedPub(row);
+              setShowDelete(true);
+            }}
+            className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"
+          >
             <TrashIcon />
           </button>
-          <button onClick={() => { setEditPub(row); setView(VIEWS.EDIT); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+          <button
+            onClick={() => {
+              setEditPub(row);
+              setView(VIEWS.EDIT);
+            }}
+            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+          >
             <PenIcon />
           </button>
         </div>
@@ -121,30 +188,29 @@ export default function Publications() {
   if (view === VIEWS.EDIT && editPub) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => { setView(VIEWS.DASHBOARD); setEditPub(null); }} className="cursor-pointer">Settings</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => { setView(VIEWS.DASHBOARD); setEditPub(null); }} className="cursor-pointer">Publications</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Edit Magazine</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Edit Magazine</h1>
-          <p className="text-sm text-slate-500">You will find everything about users in this platform.</p>
+          <p className="text-sm text-slate-500">
+            You will find everything about users in this platform.
+          </p>
         </header>
 
         <EditMagazineForm
           publication={editPub}
           onUpdate={handleUpdate}
-          onCancel={() => { setView(VIEWS.DASHBOARD); setEditPub(null); }}
+          onCancel={() => {
+            setView(VIEWS.DASHBOARD);
+            setEditPub(null);
+          }}
         />
 
         <EditSuccessModal
           open={editSuccess}
-          onClose={() => { setEditSuccess(false); setEditPub(null); setView(VIEWS.DASHBOARD); }}
+          onClose={() => {
+            setEditSuccess(false);
+            setEditPub(null);
+            setView(VIEWS.DASHBOARD);
+          }}
         />
       </>
     );
@@ -154,27 +220,24 @@ export default function Publications() {
   if (view === VIEWS.PUBLISH) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Home</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Settings</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Publications</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Publish Magazine</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Publish Magazine</h1>
-          <p className="text-sm text-slate-500">You will find everything about users in this platform.</p>
+          <p className="text-sm text-slate-500">
+            You will find everything about users in this platform.
+          </p>
         </header>
 
-        <PublishMagazineForm onPublish={handlePublish} onCancel={() => setView(VIEWS.DASHBOARD)} />
+        <PublishMagazineForm
+          onPublish={handlePublish}
+          onCancel={() => setView(VIEWS.DASHBOARD)}
+        />
 
         {successModal && (
-          <PublishSuccessModal open shareLink={successModal} onClose={() => setSuccessModal(null)} />
+          <PublishSuccessModal
+            open
+            shareLink={successModal}
+            onClose={() => setSuccessModal(null)}
+          />
         )}
       </>
     );
@@ -184,28 +247,42 @@ export default function Publications() {
   if (view === VIEWS.LIST) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Home</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Settings</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Publications</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <header className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold mb-1">Magazines List</h1>
-            <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+            <p className="text-sm text-slate-500">
+              List of all the magazines you been looking for
+            </p>
           </div>
         </header>
 
-        <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(PUBLICATION_STATUSES)} search={search} onSearchChange={setSearch} />
+        <Toolbar
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          statusOptions={Object.values(PUBLICATION_STATUSES)}
+          search={search}
+          onSearchChange={setSearch}
+        />
         <DataTable columns={columns} data={publications} loading={loading} />
 
-        <MagazineDetailsDrawer open={showDetails} publication={selectedPub} onClose={() => { setShowDetails(false); setSelectedPub(null); }} onDeactivate={handleDeactivate} />
-        <DeleteMagazineDrawer open={showDelete} publication={selectedPub} onClose={() => { setShowDelete(false); setSelectedPub(null); }} onDelete={handleDelete} />
+        <MagazineDetailsDrawer
+          open={showDetails}
+          publication={selectedPub}
+          onClose={() => {
+            setShowDetails(false);
+            setSelectedPub(null);
+          }}
+          onDeactivate={handleDeactivate}
+        />
+        <DeleteMagazineDrawer
+          open={showDelete}
+          publication={selectedPub}
+          onClose={() => {
+            setShowDelete(false);
+            setSelectedPub(null);
+          }}
+          onDelete={handleDelete}
+        />
       </>
     );
   }
@@ -213,39 +290,61 @@ export default function Publications() {
   /* ----- Dashboard View ----- */
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Settings</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Publications</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Magazine Publications</h1>
-          <p className="text-sm text-slate-500">You will find everything about users in this platform.</p>
+          <p className="text-sm text-slate-500">
+            You will find everything about users in this platform.
+          </p>
         </div>
-        <Button text='Publish New Magazine' handler={() => setView(VIEWS.PUBLISH)} />
+        <Button
+          text="Publish New Magazine"
+          handler={() => setView(VIEWS.PUBLISH)}
+        />
       </header>
 
       <div className="flex gap-4 mb-8 flex-wrap">
-        <StatCard title="Total Readers" value={stats?.totalReaders ?? 0} color={CHART_COLORS.success} trend="up" changeLabel="+ 100% vs last month" changeColor="text-emerald-600" />
+        <StatCard
+          title="Total Readers"
+          value={stats?.totalReaders ?? 0}
+          color={CHART_COLORS.success}
+          trend="up"
+          changeLabel="+ 100% vs last month"
+          changeColor="text-emerald-600"
+        />
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
-          <span className="text-sm font-medium text-slate-700">Total Publications</span>
-          <div className="text-3xl font-bold text-slate-900 mt-3">{stats?.totalPublications ?? 0}</div>
+          <span className="text-sm font-medium text-slate-700">
+            Total Publications
+          </span>
+          <div className="text-3xl font-bold text-slate-900 mt-3">
+            {stats?.totalPublications ?? 0}
+          </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
-          <span className="text-sm font-medium text-slate-700">Live Promo Code & Drafts</span>
+          <span className="text-sm font-medium text-slate-700">
+            Live Promo Code & Drafts
+          </span>
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between">
-              <div><span className="text-xl font-bold text-slate-900">{stats?.liveCount ?? 0}</span><span className="text-sm text-slate-500 ml-2">Live Magazines</span></div>
+              <div>
+                <span className="text-xl font-bold text-slate-900">
+                  {stats?.liveCount ?? 0}
+                </span>
+                <span className="text-sm text-slate-500 ml-2">
+                  Live Magazines
+                </span>
+              </div>
               <ChevronRightIcon />
             </div>
             <div className="flex items-center justify-between">
-              <div><span className="text-xl font-bold text-slate-900">{String(stats?.draftCount ?? 0).padStart(2, '0')}</span><span className="text-sm text-slate-500 ml-2">Draft Magazines</span></div>
+              <div>
+                <span className="text-xl font-bold text-slate-900">
+                  {String(stats?.draftCount ?? 0).padStart(2, "0")}
+                </span>
+                <span className="text-sm text-slate-500 ml-2">
+                  Draft Magazines
+                </span>
+              </div>
               <ChevronRightIcon />
             </div>
           </div>
@@ -256,16 +355,46 @@ export default function Publications() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold">Magazines List</h2>
-            <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+            <p className="text-sm text-slate-500">
+              List of all the magazines you been looking for
+            </p>
           </div>
         </div>
-        <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(PUBLICATION_STATUSES)} search={search} onSearchChange={setSearch} />
+        <Toolbar
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          statusOptions={Object.values(PUBLICATION_STATUSES)}
+          search={search}
+          onSearchChange={setSearch}
+        />
         <DataTable columns={columns} data={publications} loading={loading} />
       </section>
 
-      <MagazineDetailsDrawer open={showDetails} publication={selectedPub} onClose={() => { setShowDetails(false); setSelectedPub(null); }} onDeactivate={handleDeactivate} />
-      <DeleteMagazineDrawer open={showDelete} publication={selectedPub} onClose={() => { setShowDelete(false); setSelectedPub(null); }} onDelete={handleDelete} />
-      {successModal && <PublishSuccessModal open shareLink={successModal} onClose={() => setSuccessModal(null)} />}
+      <MagazineDetailsDrawer
+        open={showDetails}
+        publication={selectedPub}
+        onClose={() => {
+          setShowDetails(false);
+          setSelectedPub(null);
+        }}
+        onDeactivate={handleDeactivate}
+      />
+      <DeleteMagazineDrawer
+        open={showDelete}
+        publication={selectedPub}
+        onClose={() => {
+          setShowDelete(false);
+          setSelectedPub(null);
+        }}
+        onDelete={handleDelete}
+      />
+      {successModal && (
+        <PublishSuccessModal
+          open
+          shareLink={successModal}
+          onClose={() => setSuccessModal(null)}
+        />
+      )}
     </>
   );
 }

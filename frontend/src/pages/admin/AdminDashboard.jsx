@@ -1,11 +1,4 @@
 import React, { useState } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatCard, { MiniChart } from '@/components/ui/stat-card';
 import DataTable from '@/components/ui/data-table';
 import { CHART_COLORS } from '@/config/theme';
@@ -63,15 +56,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-1 overflow-scroll">
-      {/* 1. Breadcrumbs */}
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Admin Dashboard</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       {/* 2. Header */}
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
@@ -146,14 +130,14 @@ export default function AdminDashboard() {
               <li className="flex justify-between text-xs"><span className="text-slate-500">Unpaid Users</span> <span className="font-semibold text-slate-800">2,75,197 (14%)</span></li>
             </ul>
           </div>
-          <Button text="View Details" variant="outline" className="w-full" />
+          <Button text="View Details" width="w-full" />
         </div>
-
+      
         {/* Recent Payments */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="font-semibold text-slate-900">Recent Payment Deposits</h3>
-                <button className="text-sm font-medium text-slate-900 bg-slate-100 px-4 py-2 rounded-lg">View deposits &rarr;</button>
+                <Button text='View deposits' />
             </div>
             <div className="space-y-4">
                 {[1,2,3,4].map((i) => (

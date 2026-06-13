@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatCard from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
@@ -13,6 +6,7 @@ import Toolbar from '@/components/ui/toolbar';
 import Modal from '@/components/ui/modal';
 import { EyeIcon, TrashIcon, PenIcon } from '@/components/ui/icons';
 import useSubscriptions from '@/hooks/useSubscriptions';
+import { confirmDelete, toastSuccess } from '@/lib/confirm';
 import { ORG, SUBSCRIPTION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
@@ -74,8 +68,12 @@ export default function Subscriptions() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this subscription?')) return;
-    try { await remove(id); } catch (err) { console.error('Failed to delete', err); }
+    const ok = await confirmDelete({ text: 'This subscription will be permanently deleted.' });
+    if (!ok) return;
+    try {
+      await remove(id);
+      toastSuccess('Subscription deleted');
+    } catch (err) { console.error('Failed to delete', err); }
   }
 
   async function handleToggle(sub) {
@@ -103,16 +101,6 @@ export default function Subscriptions() {
 
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Settings</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Subscription</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Manage Subscriptions</h1>

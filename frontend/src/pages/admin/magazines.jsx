@@ -1,12 +1,4 @@
 import Card from "@/components/card";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
-import { RiHome6Line } from "react-icons/ri";
 import {useLoaderData} from "react-router";
 
 export default function Magazines({ handleBuy, loading, message }) {
@@ -15,18 +7,6 @@ export default function Magazines({ handleBuy, loading, message }) {
 
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/"><RiHome6Line size={15} opacity="50%" /></BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink>Magazines</BreadcrumbLink>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="flex flex-col sm:flex-row justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Magazines</h1>

@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatCard from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
@@ -82,15 +75,6 @@ export default function Payments() {
   if (view === VIEWS.PAYMENT_LIST) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Home</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Payments</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Payment List</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
         <h1 className="text-2xl font-bold mb-1">Payment List</h1>
         <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
         <Toolbar statusFilter={payStatusFilter} onStatusChange={setPayStatusFilter} statusOptions={Object.values(PAYMENT_STATUSES)} search={paySearch} onSearchChange={setPaySearch} onExport={() => {}} />
@@ -105,15 +89,6 @@ export default function Payments() {
   if (view === VIEWS.PAYOUT_LIST) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Home</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Payments</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Influencer Payout</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
         <h1 className="text-2xl font-bold mb-1">Influencer Payout</h1>
         <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
         <Toolbar statusFilter={payoutStatusFilter} onStatusChange={setPayoutStatusFilter} statusOptions={Object.values(PAYOUT_STATUSES)} search={payoutSearch} onSearchChange={setPayoutSearch} onExport={() => {}} />
@@ -125,16 +100,6 @@ export default function Payments() {
 
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Settings</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Payments</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Payments</h1>

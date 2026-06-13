@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatCard, { MiniChart } from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
 import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
-import DeactivateUserDrawer from '@/components/users/DeactivateUserDrawer';
 import AddUserModal from '@/components/users/AddUserModal';
+import UserDetailView from '@/components/users/UserDetailView';
+import UserEditView from '@/components/users/UserEditView';
 import useUsers from '@/hooks/useUsers';
+import { confirmDelete, toastSuccess } from '@/lib/confirm';
 import { ORG, USER_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
@@ -34,10 +29,10 @@ function Avatar() {
   );
 }
 
-const VIEWS = { DASHBOARD: 'dashboard', LIST: 'list' };
+const VIEWS = { DASHBOARD: 'dashboard', LIST: 'list', DETAIL: 'detail', EDIT: 'edit' };
 
 export default function Users() {
-  const { users, stats, loading, init, fetchAll, createUser, deactivateUser, removeUser } = useUsers();
+  const { users, stats, loading, init, fetchAll, createUser, updateUser, suspendUser, removeUser } = useUsers();
 
   const [view, setView] = useState(VIEWS.DASHBOARD);
   const [search, setSearch] = useState('');
@@ -45,7 +40,6 @@ export default function Users() {
   const [sortBy, setSortBy] = useState('');
 
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showDeactivate, setShowDeactivate] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => { init(); }, [init]);
@@ -60,18 +54,25 @@ export default function Users() {
     } catch (err) { console.error('Failed to add user', err); }
   }
 
-  async function handleDeactivate(id) {
+  async function handleDelete(id) {
+    const ok = await confirmDelete({ text: 'This user will be permanently deleted.' });
+    if (!ok) return;
     try {
-      await deactivateUser(id);
-      setShowDeactivate(false);
-      setSelectedUser(null);
-    } catch (err) { console.error('Failed to deactivate', err); }
+      await removeUser(id);
+      toastSuccess('User deleted');
+    } catch (err) { console.error('Failed to delete', err); }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this user?')) return;
-    try { await removeUser(id); } catch (err) { console.error('Failed to delete', err); }
-  }
+  const actionsColumn = {
+    key: '_actions', label: '', align: 'right',
+    render: (_v, row) => (
+      <div className="flex items-center justify-end gap-1">
+        <button onClick={() => { setSelectedUser(row); setView(VIEWS.DETAIL); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><EyeIcon /></button>
+        <button onClick={() => handleDelete(row.id)} className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"><TrashIcon /></button>
+        <button onClick={() => { setSelectedUser(row); setView(VIEWS.EDIT); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><PenIcon /></button>
+      </div>
+    ),
+  };
 
   const dashboardColumns = [
     {
@@ -99,16 +100,7 @@ export default function Users() {
     { key: 'lastActive', label: 'Last Active', render: (v) => <span className="text-slate-600">{v}</span> },
     { key: 'totalSpent', label: 'Total Spent', render: (v) => `${ORG.currencySymbol}${v?.toLocaleString('en-IN')}` },
     { key: 'joinedOn', label: 'Joined On', render: (v) => <span className="text-slate-600">{formatDate(v)}</span> },
-    {
-      key: '_actions', label: '', align: 'right',
-      render: (_v, row) => (
-        <div className="flex items-center justify-end gap-1">
-          <button onClick={() => { setSelectedUser(row); setShowDeactivate(true); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><EyeIcon /></button>
-          <button onClick={() => handleDelete(row.id)} className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"><TrashIcon /></button>
-          <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><PenIcon /></button>
-        </div>
-      ),
-    },
+    actionsColumn,
   ];
 
   const listColumns = [
@@ -135,22 +127,38 @@ export default function Users() {
       ),
     },
     { key: 'lastActive', label: 'Last Active', render: (v) => <span className="text-slate-600">{v}</span> },
+    actionsColumn,
   ];
+
+  /* ----- Detail View ----- */
+  if (view === VIEWS.DETAIL && selectedUser) {
+    return (
+      <UserDetailView
+        user={selectedUser}
+        onBack={() => { setSelectedUser(null); setView(VIEWS.DASHBOARD); }}
+        onEdit={() => setView(VIEWS.EDIT)}
+      />
+    );
+  }
+
+  /* ----- Edit View ----- */
+  if (view === VIEWS.EDIT && selectedUser) {
+    return (
+      <UserEditView
+        user={selectedUser}
+        updateUser={updateUser}
+        suspendUser={suspendUser}
+        onCancel={() => setView(VIEWS.DETAIL)}
+        onSaved={(updated) => { setSelectedUser((prev) => ({ ...prev, ...updated })); setView(VIEWS.DETAIL); }}
+        onExit={() => { setSelectedUser(null); setView(VIEWS.DASHBOARD); }}
+      />
+    );
+  }
 
   /* ----- List View ----- */
   if (view === VIEWS.LIST) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">Home</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.DASHBOARD)} className="cursor-pointer">User</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Users List</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Users List</h1>
           <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
@@ -165,13 +173,6 @@ export default function Users() {
         />
 
         <DataTable columns={listColumns} data={users} loading={loading} />
-
-        <DeactivateUserDrawer
-          open={showDeactivate}
-          user={selectedUser}
-          onClose={() => { setShowDeactivate(false); setSelectedUser(null); }}
-          onDeactivate={handleDeactivate}
-        />
       </>
     );
   }
@@ -179,18 +180,6 @@ export default function Users() {
   /* ----- Dashboard View ----- */
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Settings</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Another link</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Users</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Users</h1>
@@ -278,13 +267,6 @@ export default function Users() {
           </button>
         </div>
       </section>
-
-      <DeactivateUserDrawer
-        open={showDeactivate}
-        user={selectedUser}
-        onClose={() => { setShowDeactivate(false); setSelectedUser(null); }}
-        onDeactivate={handleDeactivate}
-      />
 
       {showAddModal && (
         <AddUserModal

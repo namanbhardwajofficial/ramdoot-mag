@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
@@ -122,16 +115,6 @@ export default function InfluencerCampaigns() {
   if (view === VIEWS.INFLUENCER_DETAIL && selectedInfluencer) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.INFLUENCER_LIST)} className="cursor-pointer">Influencers Campaigns</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.INFLUENCER_LIST)} className="cursor-pointer">Influencers list</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Influencers Name 1</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <InfluencerDetail
           influencer={selectedInfluencer}
           onBack={() => { setView(VIEWS.INFLUENCER_LIST); setSelectedInfluencer(null); }}
@@ -146,16 +129,6 @@ export default function InfluencerCampaigns() {
   if (view === VIEWS.CAMPAIGN_LIST) {
     return (
       <>
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.INFLUENCER_LIST)} className="cursor-pointer">Settings</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink onClick={() => setView(VIEWS.INFLUENCER_LIST)} className="cursor-pointer">Influencers Campaigns</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Influencers list</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Campaign List</h1>
           <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
@@ -183,18 +156,6 @@ export default function InfluencerCampaigns() {
   /* ----- Influencer List (default) ----- */
   return (
     <>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Settings</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Influencers Campaigns</BreadcrumbLink></BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbLink>Influencers list</BreadcrumbLink></BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <header className="mb-6">
         <h1 className="text-2xl font-bold mb-1">Influencers List</h1>
         <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>

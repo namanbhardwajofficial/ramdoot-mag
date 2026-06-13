@@ -55,5 +55,30 @@ export default function useUsers() {
     await Promise.all([fetchStats(), fetchAll()]);
   }, [fetchStats, fetchAll]);
 
-  return { users, stats, loading, init, fetchAll, fetchStats, createUser, deactivateUser, removeUser };
+  // --- Stubbed actions (no backend yet). Replace the body of each with a real
+  //     request when the API lands; callers/UI won't need to change. ---
+
+  const updateUser = useCallback(async (id, form) => {
+    // TODO: replace with real request, e.g.
+    // return safeFetch(`${BACKEND_URL}/users/${id}`, {
+    //   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+    // });
+    await new Promise((r) => setTimeout(r, 700));
+    console.info('[stub] updateUser', id, form);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...form } : u)));
+    return { id, ...form };
+  }, []);
+
+  const suspendUser = useCallback(async (id, payload) => {
+    // TODO: replace with real request, e.g.
+    // return safeFetch(`${BACKEND_URL}/users/${id}/status`, {
+    //   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    // });
+    await new Promise((r) => setTimeout(r, 900));
+    console.info('[stub] suspendUser', id, payload);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: payload.status || 'suspended' } : u)));
+    return { id, ...payload };
+  }, []);
+
+  return { users, stats, loading, init, fetchAll, fetchStats, createUser, deactivateUser, updateUser, suspendUser, removeUser };
 }

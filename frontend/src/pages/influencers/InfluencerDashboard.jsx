@@ -1,11 +1,4 @@
 import React from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import StatCard from '@/components/ui/stat-card'; // Assuming it has the mini-graph inside
 import Button from "@/components/Button.jsx";
 import { ChevronRightIcon, SearchIcon, BellIcon } from '@/components/ui/icons';
@@ -20,15 +13,7 @@ export default function InfluencerDashboard() {
   return (
     <div className="p-1">
       {/* 1. Top Navigation / Search Bar */}
-      <div className="flex items-center justify-between mb-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink href="/">Settings</BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink>Another link</BreadcrumbLink></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        
+      <div className="flex items-center justify-end mb-6">
         <div className="flex items-center gap-4">
           <div className="relative">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
