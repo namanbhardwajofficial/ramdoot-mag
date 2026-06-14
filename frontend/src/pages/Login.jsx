@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
-import loginImg from '../assets/images/login_img.png';
+import loginImg from '../assets/images/login_img.webp';
 import { FiHelpCircle, FiEye } from "react-icons/fi";
 import { BACKEND_URL } from '@/config/constants';
 
@@ -38,16 +38,25 @@ const Login = () => {
     };
 
     return (
-        <section className="min-h-screen lg:max-h-screen lg:p-5 w-full flex flex-col lg:flex-row lg:gap-3 overflow-hidden max-w-375 mx-auto bg-[#f8f9fa] lg:bg-transparent">
+        <section className="min-h-screen lg:max-h-screen lg:p-5 w-full flex flex-col lg:flex-row lg:gap-3 lg:overflow-hidden max-w-375 mx-auto bg-[#f8f9fa] lg:bg-transparent">
             {/* Image Container (Top on Mobile, Right on Desktop) */}
-            <div className="w-full h-[45vh] lg:h-auto lg:w-1/2 lg:order-2 relative flex items-center justify-center bg-white overflow-hidden lg:rounded-2xl lg:shadow-sm lg:border-black/5 lg:border">
+            <div className="w-full h-[45vh] lg:h-auto lg:w-1/2 lg:order-2 relative flex items-center justify-center bg-[#0e1320] overflow-hidden lg:rounded-2xl lg:shadow-sm lg:border-black/5 lg:border">
                 {/* Mobile Header overlay over image */}
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 text-white lg:hidden">
                     <Logo />
                     <a className="text-white/80 cursor-pointer pr-2 text-sm">Need any help?</a>
                 </div>
 
-                <img src={loginImg} className="w-full h-full object-cover lg:scale-110 lg:rounded-2xl" alt="Lord Krishna image" />
+                <img
+                    src={loginImg}
+                    width={1080}
+                    height={1920}
+                    fetchPriority="high"
+                    decoding="async"
+                    loading="eager"
+                    className="w-full h-full object-cover lg:scale-110 lg:rounded-2xl"
+                    alt="Lord Krishna"
+                />
 
                 {/* Desktop overlay text over image */}
                 <div className="hidden lg:flex absolute bottom-0 text-white backdrop-blur-xs pt-5 pb-15 flex-col gap-3">

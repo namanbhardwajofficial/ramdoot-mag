@@ -3,6 +3,26 @@
 @theme {
     --color-btn-primary: #292929;
     --color-highlight: #828283;
+
+    --animate-marquee: marquee 45s linear infinite;
+    --animate-marquee-reverse: marquee 45s linear infinite reverse;
+
+    @keyframes marquee {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(-50%);
+        }
+    }
+}
+
+/* Respect users who prefer reduced motion: freeze the marquee */
+@media (prefers-reduced-motion: reduce) {
+    .animate-marquee,
+    .animate-marquee-reverse {
+        animation: none;
+    }
 }
 
 @font-face {

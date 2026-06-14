@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
-import loginImg from '../assets/images/login_img.png';
+import loginImg from '../assets/images/login_img.webp';
 import { FiHelpCircle, FiEye, FiRefreshCw, FiChevronDown, FiChevronLeft } from "react-icons/fi";
 import { BACKEND_URL } from '@/config/constants';
 
@@ -119,16 +119,25 @@ const Signup = () => {
     };
 
     return (
-        <section className="min-h-screen lg:max-h-screen lg:p-5 w-full flex flex-col lg:flex-row lg:gap-3 overflow-hidden max-w-[1440px] mx-auto bg-[#f8f9fa] lg:bg-transparent">
+        <section className="min-h-screen lg:max-h-screen lg:p-5 w-full flex flex-col lg:flex-row lg:gap-3 lg:overflow-hidden max-w-375 mx-auto bg-[#f8f9fa] lg:bg-transparent">
             {/* Image Container */}
-            <div className="w-full h-[45vh] lg:h-auto lg:w-1/2 lg:order-2 relative flex items-center justify-center bg-white overflow-hidden lg:rounded-2xl lg:shadow-sm lg:border-black/5 lg:border">
+            <div className="w-full h-[45vh] lg:h-auto lg:w-1/2 lg:order-2 relative flex items-center justify-center bg-[#0e1320] overflow-hidden lg:rounded-2xl lg:shadow-sm lg:border-black/5 lg:border">
                 {/* Mobile Header */}
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 text-white lg:hidden">
                     <Logo />
                     <a className="text-white/80 cursor-pointer pr-2 text-sm hover:underline">Need any help?</a>
                 </div>
 
-                <img src={loginImg} className="w-full h-full object-cover lg:scale-110 lg:rounded-2xl" alt="Lord Krishna image" />
+                <img
+                    src={loginImg}
+                    width={1080}
+                    height={1920}
+                    fetchPriority="high"
+                    decoding="async"
+                    loading="eager"
+                    className="w-full h-full object-cover lg:scale-110 lg:rounded-2xl"
+                    alt="Lord Krishna"
+                />
 
                 {/* Desktop overlay */}
                 <div className="hidden lg:flex absolute bottom-0 text-white backdrop-blur-xs pt-5 pb-15 flex-col gap-3">
@@ -294,21 +303,34 @@ const Signup = () => {
                         </div>
                     )}
 
-                    <div className="mt-8 mb-4">
-                        <Button 
-                            text={loading ? (step === 3 ? "Creating..." : "Sending OTP...") : (step === 3 ? "Create Account" : "Next")} 
-                            width="100%" 
-                            handler={step === 3 ? handleSignup : handleNext} 
-                        />
-                    </div>
-
-                    {step > 1 && (
-                        <div className="flex justify-center items-center mb-4 cursor-pointer text-black/50 hover:text-black transition-colors w-fit mx-auto group" onClick={handleBack}>
-                            <FiChevronLeft className="mr-1 group-hover:-translate-x-1 transition-transform" />
-                            <span className="text-sm font-medium">Go Back</span>
+                    {step === 1 ? (
+                        <div className="mt-8 mb-4">
+                            <Button
+                                text={loading ? "Loading..." : "Next"}
+                                width="100%"
+                                handler={handleNext}
+                            />
+                        </div>
+                    ) : (
+                        <div className="mt-8 mb-4 flex items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={handleBack}
+                                className="flex shrink-0 items-center cursor-pointer text-black/50 hover:text-black transition-colors group"
+                            >
+                                <FiChevronLeft className="mr-1 group-hover:-translate-x-1 transition-transform" />
+                                <span className="text-sm font-medium">Go Back</span>
+                            </button>
+                            <div className="flex-1">
+                                <Button
+                                    text={loading ? (step === 3 ? "Creating..." : "Sending OTP...") : (step === 3 ? "Create Account" : "Next")}
+                                    width="100%"
+                                    handler={step === 3 ? handleSignup : handleNext}
+                                />
+                            </div>
                         </div>
                     )}
-                    
+
                     <div className="flex justify-center gap-2 items-center mt-2">
                         <p className="font-light tracking-wide text-black/60 lg:text-highlight/80 text-sm">Already have an account?</p>
                         <Link to="/login" className="font-bold lg:font-medium cursor-pointer hover:underline text-black lg:text-black">Login</Link>
