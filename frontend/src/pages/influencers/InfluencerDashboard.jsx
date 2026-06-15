@@ -1,143 +1,165 @@
 import React from 'react';
-import StatCard from '@/components/ui/stat-card'; // Assuming it has the mini-graph inside
-import Button from "@/components/Button.jsx";
-import { ChevronRightIcon, SearchIcon, BellIcon } from '@/components/ui/icons';
+import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import Button from '@/components/Button.jsx';
+import { ChevronRightIcon, ChevronDownIcon } from '@/components/ui/icons';
+import { CHART_COLORS } from '@/config/theme';
+
+// Mini trend series for the Earning / Payout cards.
+const earningTrend = [10, 14, 11, 18, 16, 24, 21, 30, 27, 38].map((v) => ({ v }));
+const payoutTrend = [12, 17, 14, 22, 28, 25, 34, 31, 40, 46].map((v) => ({ v }));
+
+const promoStats = [
+  { id: 'links', value: '20', label: 'Live Links' },
+  { id: 'codes', value: '03', label: 'Promo Code' },
+];
+
+const sponsoredMagazines = Array.from({ length: 4 }, (_, i) => ({
+  id: i + 1,
+  title: 'Ramdoot August 2026 Edition',
+  desc: 'Curated magazine delivering insights, trends and inspiration across technology, culture & lifestyle.',
+  clicks: '23K Clicks',
+}));
+
+function UpArrow(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function PeriodSelect() {
+  return (
+    <div className="flex items-center gap-1 text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1.5">
+      This Month
+      <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400" />
+    </div>
+  );
+}
+
+function MetricCard({ title, value, change, data, gradientId }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-semibold text-slate-700">{title}</span>
+        <PeriodSelect />
+      </div>
+
+      <div className="text-3xl font-bold text-slate-900">{value}</div>
+      <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+        <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600">
+          <UpArrow className="w-3 h-3" />
+          {change}
+        </span>
+        <span className="text-slate-400">vs last month</span>
+      </div>
+
+      <div className="h-16 mt-4 -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="v"
+              stroke={CHART_COLORS.success}
+              strokeWidth={2}
+              fill={`url(#${gradientId})`}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 export default function InfluencerDashboard() {
-  const sponsoredMagazines = [
-    { id: 1, name: 'Magazines 1', desc: 'List of all the magazines you been looking for' },
-    { id: 2, name: 'Magazines', desc: 'List of all the magazines you been looking for' },
-    { id: 3, name: 'Magazines', desc: 'List of all the magazines you been looking for' },
-  ];
-
   return (
     <div className="p-1">
-      {/* 1. Top Navigation / Search Bar */}
-      <div className="flex items-center justify-end mb-6">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
-              <SearchIcon className="w-4 h-4" />
-            </span>
-            <input 
-              type="text" 
-              placeholder="Search" 
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-full text-sm w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-          <button className="p-2 bg-white border border-slate-200 rounded-full text-slate-500 hover:bg-slate-50 relative">
-            <BellIcon className="w-5 h-5" />
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-emerald-500 border-2 border-white rounded-full"></span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Page Title & Action */}
-      <header className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Influencer Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage promo code, earning, and everything related from one place</p>
-        </div>
-        <Button 
-          text="Create New Campaign" 
-          variant="primary" 
-          icon={<ChevronRightIcon className="w-4 h-4" />} 
-          reverseIcon
-        />
+      {/* Page title */}
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Influencer Dashboard</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Manage promo code, earning, and everything needed from one place
+        </p>
       </header>
 
-      {/* 3. Metrics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-10">
-        {/* Earning Card */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-           <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-slate-700">Earning</span>
-              <select className="text-xs border border-slate-200 rounded-md px-2 py-1 outline-none">
-                <option>This Month</option>
-              </select>
-           </div>
-           <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-3xl font-bold text-slate-900">₹ 2,000</span>
-              <span className="text-xs text-emerald-600 font-medium flex items-center">↑ 100 <span className="ml-1 text-slate-400">vs last month</span></span>
-           </div>
-           <div className="h-16 w-full bg-slate-50 rounded-lg mt-4 flex items-end overflow-hidden">
-              {/* Mini Green Graph Placeholder */}
-              <div className="w-full h-1/2 bg-emerald-50 border-t-2 border-emerald-400 opacity-50" style={{clipPath: 'polygon(0 100%, 0 40%, 20% 60%, 40% 30%, 60% 70%, 80% 20%, 100% 50%, 100% 100%)'}}></div>
-           </div>
-        </div>
+      {/* Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+        <MetricCard
+          title="Earning"
+          value="₹ 2,000"
+          change="100%"
+          data={earningTrend}
+          gradientId="earningGradient"
+        />
+        <MetricCard
+          title="Payout"
+          value="₹ 12,000"
+          change="100%"
+          data={payoutTrend}
+          gradientId="payoutGradient"
+        />
 
-        {/* Payout Card */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-           <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-slate-700">Payout</span>
-           </div>
-           <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-3xl font-bold text-slate-900">₹ 12,000</span>
-              <span className="text-xs text-emerald-600 font-medium flex items-center">↑ 100% <span className="ml-1 text-slate-400">vs last month</span></span>
-           </div>
-           <div className="h-16 w-full bg-slate-50 rounded-lg mt-4 flex items-end overflow-hidden">
-              {/* Mini Green Graph Placeholder */}
-              <div className="w-full h-1/2 bg-emerald-50 border-t-2 border-emerald-400 opacity-50" style={{clipPath: 'polygon(0 100%, 0 50%, 25% 70%, 50% 40%, 75% 60%, 100% 20%, 100% 100%)'}}></div>
-           </div>
-        </div>
-
-        {/* Live Promo Code & Links Card */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Live Promo Code & Links</h3>
+        {/* Live Promo Code & Links */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Live Promo Code &amp; Links</h3>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors border border-slate-100">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-slate-900">20</span>
-                <span className="text-sm text-slate-500">Live Links</span>
-              </div>
-              <ChevronRightIcon className="w-4 h-4 text-slate-400" />
-            </div>
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors border border-slate-100">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-slate-900">03</span>
-                <span className="text-sm text-slate-500">Promo Code</span>
-              </div>
-              <ChevronRightIcon className="w-4 h-4 text-slate-400" />
-            </div>
+            {promoStats.map((stat) => (
+              <button
+                key={stat.id}
+                type="button"
+                className="w-full flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors text-left"
+              >
+                <span className="flex items-baseline gap-3">
+                  <span className="text-2xl font-bold text-slate-900">{stat.value}</span>
+                  <span className="text-sm text-slate-500">{stat.label}</span>
+                </span>
+                <ChevronRightIcon className="w-4 h-4 text-slate-400" />
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* 4. Sponsored Magazines Section */}
+      {/* Sponsored Magazines */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 font-serif">Sponsored Magazines</h2>
-            <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
-          </div>
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg">
-            <button className="p-1.5 bg-white shadow-sm rounded-md"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></svg></button>
-            <button className="p-1.5 text-slate-400"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg></button>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-900">Sponsored Magazine</h2>
+          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
         </div>
 
-        <div className="space-y-4">
-          {sponsoredMagazines.map((mag, idx) => (
-            <div key={mag.id} className="flex flex-col md:flex-row items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-5 w-full md:w-auto">
-                <div className="w-40 h-24 bg-slate-200 rounded-xl shrink-0" /> {/* Image Placeholder */}
-                <div>
-                  <h4 className="text-lg font-bold text-slate-900">{mag.name}</h4>
-                  <p className="text-xs text-slate-400 max-w-xs">{mag.desc}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {sponsoredMagazines.map((mag) => (
+            <article
+              key={mag.id}
+              className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 hover:shadow-md transition-shadow"
+            >
+              <div className="w-36 h-36 bg-slate-200 rounded-xl shrink-0" />
+
+              <div className="flex flex-col flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="text-base font-semibold text-slate-900">{mag.title}</h4>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{mag.clicks}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{mag.desc}</p>
+
+                <div className="mt-auto pt-4 flex items-center gap-4">
+                  <Button text="View Details" />
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                  >
+                    Share Magazine
+                  </button>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-8 mt-4 md:mt-0">
-                <button className="text-sm font-medium text-slate-600 hover:text-slate-900">Share Magazine</button>
-                <Button 
-                  text={idx === 0 ? "Campaign Overview" : "View Details"} 
-                  variant={idx === 0 ? "primary" : "secondary"} 
-                  className="px-6"
-                  icon={<ChevronRightIcon className="w-4 h-4" />}
-                  reverseIcon
-                />
-              </div>
-            </div>
+            </article>
           ))}
         </div>
       </section>

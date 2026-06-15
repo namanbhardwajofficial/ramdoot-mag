@@ -30,9 +30,9 @@ export const ADMIN_NAV = {
 
 export const INFLUENCER_NAV = {
   main: [
-    { key: "home", label: "Home" },
+    { key: "home", label: "Dashboard" },
     { key: "earnings", label: "Earnings" },
-    { key: "subscriptions", label: "Subscriptions" },
+    { key: "campaigns", label: "Campaigns" },
   ],
 
   footer: [

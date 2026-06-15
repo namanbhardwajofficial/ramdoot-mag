@@ -20,6 +20,8 @@ const Payments = lazy(() => import("@/pages/admin/payments.jsx"));
 const Publications = lazy(() => import("@/pages/admin/publications.jsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx"));
 const InfluencerDashboard = lazy(() => import("./pages/influencers/InfluencerDashboard.jsx"));
+const InfluencerCampaignList = lazy(() => import("./pages/influencers/Campaigns.jsx"));
+const CampaignDetails = lazy(() => import("./pages/influencers/CampaignDetails.jsx"));
 const AdminLayout = lazy(() => import("./layouts/adminLayout.jsx"));
 const InfluencerLayout = lazy(() => import("./layouts/InfluencerLayout.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
@@ -73,7 +75,10 @@ const router = createBrowserRouter([
     path: "influencer",
     element: withSuspense(<InfluencerLayout />),
     children: [
-      { index: true, element: withSuspense(<InfluencerDashboard />) },
+      { index: true, element: <Navigate to="home" replace /> },
+      { path: "home", element: withSuspense(<InfluencerDashboard />) },
+      { path: "campaigns", element: withSuspense(<InfluencerCampaignList />) },
+      { path: "campaigns/:id", element: withSuspense(<CampaignDetails />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
   },
