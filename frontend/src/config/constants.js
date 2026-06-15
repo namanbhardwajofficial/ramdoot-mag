@@ -130,6 +130,7 @@ export const STATUS_COLORS = {
   inactive:    { bg: 'bg-slate-100',   text: 'text-slate-600',   dot: 'bg-slate-500'   },
   completed:   { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
   pending:     { bg: 'bg-yellow-50',   text: 'text-yellow-700',  dot: 'bg-yellow-500'  },
+  initiated:   { bg: 'bg-yellow-50',   text: 'text-yellow-700',  dot: 'bg-yellow-500'  },
   paid:        { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
   pause:       { bg: 'bg-orange-50',   text: 'text-orange-700',  dot: 'bg-orange-500'  },
 };

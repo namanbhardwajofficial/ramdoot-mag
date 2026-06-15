@@ -22,6 +22,11 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx"));
 const InfluencerDashboard = lazy(() => import("./pages/influencers/InfluencerDashboard.jsx"));
 const InfluencerCampaignList = lazy(() => import("./pages/influencers/Campaigns.jsx"));
 const CampaignDetails = lazy(() => import("./pages/influencers/CampaignDetails.jsx"));
+const Earnings = lazy(() => import("./pages/influencers/Earnings.jsx"));
+const RequestPayout = lazy(() => import("./pages/influencers/RequestPayout.jsx"));
+const RequestedPayout = lazy(() => import("./pages/influencers/RequestedPayout.jsx"));
+const InfluencerSettings = lazy(() => import("./pages/influencers/Settings.jsx"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings.jsx"));
 const AdminLayout = lazy(() => import("./layouts/adminLayout.jsx"));
 const InfluencerLayout = lazy(() => import("./layouts/InfluencerLayout.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
@@ -60,6 +65,7 @@ const router = createBrowserRouter([
       { path: "publications", element: withSuspense(<Publications />) },
       { path: "influencer-campaigns", element: withSuspense(<InfluencerCampaigns />) },
       { path: "payments", element: withSuspense(<Payments />) },
+      { path: "settings", element: withSuspense(<AdminSettings />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
   },
@@ -79,6 +85,10 @@ const router = createBrowserRouter([
       { path: "home", element: withSuspense(<InfluencerDashboard />) },
       { path: "campaigns", element: withSuspense(<InfluencerCampaignList />) },
       { path: "campaigns/:id", element: withSuspense(<CampaignDetails />) },
+      { path: "earnings", element: withSuspense(<Earnings />) },
+      { path: "earnings/request-payout", element: withSuspense(<RequestPayout />) },
+      { path: "earnings/requested-payout", element: withSuspense(<RequestedPayout />) },
+      { path: "settings", element: withSuspense(<InfluencerSettings />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
   },

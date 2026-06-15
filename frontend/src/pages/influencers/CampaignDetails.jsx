@@ -4,6 +4,11 @@ import {
 } from 'recharts';
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa6';
 import Button from '@/components/Button.jsx';
+import PromoCodeDrawer from '@/components/influencers/PromoCodeDrawer';
+import ShareCampaignDrawer from '@/components/influencers/ShareCampaignDrawer';
+import { toastSuccess } from '@/lib/confirm';
+
+const CAMPAIGN_LINK = 'Atharv21i1313oqdq';
 
 const SERIES = {
   click: { label: 'Click', color: '#4F46E5' },
@@ -37,10 +42,11 @@ function LegendDot({ color, label }) {
   );
 }
 
-function ShareButton() {
+function ShareButton({ onClick }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       aria-label="Share campaign"
       className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
     >
@@ -65,6 +71,20 @@ export default function CampaignDetails() {
   // null = no promo code yet (shows "Create New Promo Code" flow);
   // an object = promo code created (shows promo stats + "Edit Promo Code").
   const [promo, setPromo] = useState(null);
+  // 'create' | 'edit' | null (closed)
+  const [promoDrawer, setPromoDrawer] = useState(null);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  function handlePromoSubmit({ code, discount }) {
+    setPromo((prev) => ({ used: prev?.used ?? 1213, ...prev, code, discount }));
+    setPromoDrawer(null);
+  }
+
+  function handlePromoDelete() {
+    setPromo(null);
+    setPromoDrawer(null);
+    toastSuccess('Promo code deleted');
+  }
 
   return (
     <div className="p-1">
@@ -83,12 +103,9 @@ export default function CampaignDetails() {
 
           <div className="flex items-center gap-2">
             {!promo && (
-              <Button
-                text="Create New Promo Code"
-                handler={() => setPromo({ code: 'Atharv100', used: 1213, discount: 18 })}
-              />
+              <Button text="Create New Promo Code" handler={() => setPromoDrawer('create')} />
             )}
-            <ShareButton />
+            <ShareButton onClick={() => setShareOpen(true)} />
           </div>
         </div>
 
@@ -135,7 +152,7 @@ export default function CampaignDetails() {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-center">
           <p className="text-xs text-slate-400 mb-3">Campaign Sharing Medium</p>
           <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center w-16 h-9 rounded-full text-white bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+            <span className="flex items-center justify-center w-16 h-9 rounded-full text-white bg-linear-to-tr from-yellow-400 via-pink-500 to-purple-600">
               <FaInstagram className="w-4 h-4" />
             </span>
             <span className="flex items-center justify-center w-16 h-9 rounded-full text-white bg-green-500">
@@ -171,10 +188,27 @@ export default function CampaignDetails() {
                 </button>
               </div>
             </div>
-            <Button text="Edit Promo Code" handler={() => { /* opens promo editor */ }} />
+            <Button text="Edit Promo Code" handler={() => setPromoDrawer('edit')} />
           </div>
         </div>
       )}
+
+      <PromoCodeDrawer
+        open={promoDrawer !== null}
+        mode={promoDrawer === 'edit' ? 'edit' : 'create'}
+        initialCode={promoDrawer === 'edit' ? promo?.code ?? '' : ''}
+        initialDiscount={promoDrawer === 'edit' ? promo?.discount ?? '' : ''}
+        onClose={() => setPromoDrawer(null)}
+        onSubmit={handlePromoSubmit}
+        onDelete={handlePromoDelete}
+      />
+
+      <ShareCampaignDrawer
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        campaignLink={CAMPAIGN_LINK}
+        promoCode={promo?.code}
+      />
     </div>
   );
 }
