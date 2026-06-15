@@ -27,3 +27,6 @@ npm-debug.log*
 
 #others
 .claude
+
+# Design assets (mockups / references)
+design/

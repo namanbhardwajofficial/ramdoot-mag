@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Drawer from "@/components/ui/drawer";
+import AccountMenu from "@/components/ui/account-menu";
 import { Link } from "react-router";
 
 const iconMap = {
@@ -90,38 +90,7 @@ export default function Nav({
             })}
           </nav>
 
-          <div className="border-t border-slate-200 pt-4">
-            <button className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#ffffff] focus:outline-none">
-              <Avatar>
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium">Atharv</div>
-
-                <div className="text-xs text-slate-400">
-                  atharv@ramdootfounda...
-                </div>
-              </div>
-
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 9l6 6 6-6"
-                />
-              </svg>
-            </button>
-          </div>
+          <AccountMenu onNavigate={onClose} />
         </div>
       </div>
     );
