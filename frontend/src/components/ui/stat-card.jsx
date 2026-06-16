@@ -21,12 +21,18 @@ export default function StatCard({
   changeColor,
 }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
+    <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-medium text-slate-700">{title}</span>
-        <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">
-          {periodLabel}
-        </span>
+         <select
+          defaultValue={periodLabel}
+          className="text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-4xl px-3 py-1.5 outline-none cursor-pointer"
+        >
+          <option>This Month</option>
+          <option>This Week</option>
+          <option>Today</option>
+          <option>This Year</option>
+        </select>
       </div>
       <div className="text-3xl font-bold text-slate-900 mt-2">
         {prefix}

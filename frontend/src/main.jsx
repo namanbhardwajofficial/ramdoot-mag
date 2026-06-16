@@ -8,11 +8,23 @@ import dummyMagazines from "@/data/dummyMagazines.js";
 
 // Landing is the homepage entry — keep it eager so it paints immediately.
 import Landing from "./pages/Landing.jsx";
+import { User } from "lucide-react";
 
 // Everything else is lazy-loaded so it stays out of the homepage's critical bundle.
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Signup = lazy(() => import("./pages/Signup.jsx"));
 const Users = lazy(() => import("./pages/admin/users.jsx"));
+//User_Mangement page import Start here
+const UserDahboard =lazy(()=>import("./pages/User/UserDashboard.jsx"));
+const UserLayout = lazy(()=> import("./layouts/UserLayout.jsx"));
+const UserManagment =lazy(()=> import("./pages/User/Users.jsx"));
+const UserSubcription =lazy(()=> import("./pages/User/Subscription.jsx"));
+const InfluencerCampaignsUser =lazy(()=> import("./pages/User/InfluencersCampaigns.jsx"));
+const PublicationsUser =lazy(()=> import("./pages/User/Publications.jsx"));
+const UserPayment =lazy(()=> import("./pages/User/payments.jsx"));
+const UserSecurity =lazy(()=> import("./pages/User/Security.jsx"));
+const UserSetting =lazy(()=> import("./pages/User/Settings.jsx"));
+//user_Mangement page import end here
 const Magazines = lazy(() => import("@/pages/admin/magazines.jsx"));
 const Subscriptions = lazy(() => import("@/pages/admin/subscriptions.jsx"));
 const InfluencerCampaigns = lazy(() => import("@/pages/admin/influencer-campaigns.jsx"));
@@ -68,6 +80,22 @@ const router = createBrowserRouter([
       { path: "settings", element: withSuspense(<AdminSettings />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
+  },
+  {
+    path:"user",
+    element:withSuspense(<UserLayout/>),
+    children:[
+      {index:true,element:<Navigate to ="home" replace/>},
+      {path:"home",element:withSuspense(<UserDahboard/>)},
+      {path:"users",element:withSuspense(<UserManagment/>)},
+      {path:"subscriptions",element:withSuspense(<UserSubcription/>)},
+      {path:"influencer-campaigns",element:withSuspense(<InfluencerCampaignsUser/>)},
+      {path:"publications",element:withSuspense(<PublicationsUser/>)},
+      {path:"payments",element:withSuspense(<UserPayment/>)},
+      {path:"security",element:withSuspense(<UserSecurity/>)},
+      {path:"settings",element:withSuspense(<UserSetting/>)},
+      {path:"help",element:withSuspense(<Help/>)},
+    ]
   },
   {
     path: "login",
