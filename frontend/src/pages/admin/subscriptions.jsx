@@ -4,6 +4,7 @@ import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
 import Modal from '@/components/ui/modal';
+import EditSubscriptionDrawer from '@/components/subscriptions/EditSubscriptionDrawer';
 import { EyeIcon, TrashIcon, PenIcon } from '@/components/ui/icons';
 import useSubscriptions from '@/hooks/useSubscriptions';
 import { confirmDelete, toastSuccess } from '@/lib/confirm';
@@ -51,11 +52,13 @@ function AddPlanModal({ plans, onClose, onSubmit }) {
 }
 
 export default function Subscriptions() {
-  const { subscriptions, plans, stats, loading, init, fetchAll, create, toggleStatus, remove } = useSubscriptions();
+  const { subscriptions, plans, stats, loading, init, fetchAll, create, update, toggleStatus, remove } = useSubscriptions();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { init(); }, [init]);
   useEffect(() => { if (!loading) fetchAll({ status: statusFilter, search }); }, [statusFilter, search, loading, fetchAll]);
@@ -80,6 +83,20 @@ export default function Subscriptions() {
     try { await toggleStatus(sub); } catch (err) { console.error('Failed to toggle status', err); }
   }
 
+  async function handleUpdate(form) {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await update(editing.id, form);
+      toastSuccess('Subscription updated');
+      setEditing(null);
+    } catch (err) {
+      console.error('Failed to update subscription', err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const columns = [
     { key: 'id', label: 'Subscription ID', render: (v) => <span className="font-mono text-xs">#{v.replace('sub_', '')}</span> },
     { key: 'status', label: 'Subscription Status', render: (v) => <StatusBadge status={v} /> },
@@ -93,7 +110,7 @@ export default function Subscriptions() {
         <div className="flex items-center justify-end gap-1">
           <button onClick={() => handleToggle(row)} title={row.status === SUBSCRIPTION_STATUSES.ACTIVE ? 'Deactivate' : 'Activate'} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><EyeIcon /></button>
           <button onClick={() => handleDelete(row.id)} title="Delete" className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"><TrashIcon /></button>
-          <button title="Edit" className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><PenIcon /></button>
+          <button onClick={() => setEditing(row)} title="Edit" className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><PenIcon /></button>
         </div>
       ),
     },
@@ -126,6 +143,15 @@ export default function Subscriptions() {
       </section>
 
       {showModal && <AddPlanModal plans={plans} onClose={() => setShowModal(false)} onSubmit={handleCreate} />}
+
+      <EditSubscriptionDrawer
+        open={!!editing}
+        subscription={editing}
+        plans={plans}
+        saving={saving}
+        onClose={() => setEditing(null)}
+        onSubmit={handleUpdate}
+      />
     </>
   );
 }

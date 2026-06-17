@@ -41,6 +41,19 @@ export const INFLUENCER_NAV = {
   ],
 };
 
+export const USER_NAV = {
+  main: [
+    { key: "home", label: "Home" },
+    { key: "magazines", label: "Magazine" },
+    { key: "subscriptions", label: "Subscriptions" },
+  ],
+
+  footer: [
+    { key: "settings", label: "Settings" },
+    { key: "help", label: "Help" },
+  ],
+};
+
 // --- Subscription ---
 export const SUBSCRIPTION_STATUSES = {
   ACTIVE: 'active',
