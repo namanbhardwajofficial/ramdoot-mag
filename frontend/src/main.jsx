@@ -41,6 +41,11 @@ const InfluencerSettings = lazy(() => import("./pages/influencers/Settings.jsx")
 const AdminSettings = lazy(() => import("./pages/admin/Settings.jsx"));
 const AdminLayout = lazy(() => import("./layouts/adminLayout.jsx"));
 const InfluencerLayout = lazy(() => import("./layouts/InfluencerLayout.jsx"));
+const UserLayout = lazy(() => import("./layouts/UserLayout.jsx"));
+const UserHome = lazy(() => import("./pages/user/Home.jsx"));
+const UserMagazines = lazy(() => import("./pages/user/Magazines.jsx"));
+const UserSubscriptions = lazy(() => import("./pages/user/Subscriptions.jsx"));
+const UserSettings = lazy(() => import("./pages/user/Settings.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 
 const PageFallback = () => (
@@ -117,6 +122,18 @@ const router = createBrowserRouter([
       { path: "earnings/request-payout", element: withSuspense(<RequestPayout />) },
       { path: "earnings/requested-payout", element: withSuspense(<RequestedPayout />) },
       { path: "settings", element: withSuspense(<InfluencerSettings />) },
+      { path: "help", element: withSuspense(<Help />) },
+    ],
+  },
+  {
+    path: "user",
+    element: withSuspense(<UserLayout />),
+    children: [
+      { index: true, element: <Navigate to="home" replace /> },
+      { path: "home", element: withSuspense(<UserHome />) },
+      { path: "magazines", element: withSuspense(<UserMagazines />) },
+      { path: "subscriptions", element: withSuspense(<UserSubscriptions />) },
+      { path: "settings", element: withSuspense(<UserSettings />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
   },

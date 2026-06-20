@@ -67,6 +67,30 @@ export function updateStatus(req, res) {
   res.json(enrichSubscription(sub));
 }
 
+export function update(req, res) {
+  const sub = subscriptions.find((s) => s.id === req.params.id);
+  if (!sub) return res.status(404).json({ message: 'Subscription not found' });
+
+  const { planId, status, createdBy } = req.body;
+
+  if (planId !== undefined) {
+    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+    if (!plan) return res.status(400).json({ message: 'Invalid plan' });
+    sub.planId = planId;
+  }
+
+  if (status !== undefined) {
+    const allowed = Object.values(SUBSCRIPTION_STATUSES);
+    if (!allowed.includes(status)) return res.status(400).json({ message: `Status must be one of: ${allowed.join(', ')}` });
+    sub.status = status;
+  }
+
+  if (createdBy !== undefined) sub.createdBy = createdBy;
+
+  sub.updatedAt = new Date().toISOString();
+  res.json(enrichSubscription(sub));
+}
+
 export function remove(req, res) {
   const idx = subscriptions.findIndex((s) => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ message: 'Subscription not found' });

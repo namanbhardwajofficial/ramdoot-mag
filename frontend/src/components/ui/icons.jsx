@@ -257,6 +257,29 @@ export const LogOutIcon = (props) => (
   </Icon>
 );
 
+export const MonitorIcon = (props) => (
+  <Icon {...props}>
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </Icon>
+);
+
+export const SmartphoneIcon = (props) => (
+  <Icon {...props}>
+    <rect x="5" y="2" width="14" height="20" rx="2" />
+    <line x1="12" y1="18" x2="12.01" y2="18" />
+  </Icon>
+);
+
+export const InfoIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </Icon>
+);
+
 export function SettingsIcon(props) {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>

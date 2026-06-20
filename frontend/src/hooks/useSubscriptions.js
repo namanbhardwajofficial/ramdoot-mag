@@ -46,6 +46,13 @@ export default function useSubscriptions() {
     await Promise.all([fetchStats(), fetchAll()]);
   }, [fetchStats, fetchAll]);
 
+  const update = useCallback(async (id, form) => {
+    await safeFetch(`${BACKEND_URL}/subscriptions/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+    });
+    await Promise.all([fetchStats(), fetchAll()]);
+  }, [fetchStats, fetchAll]);
+
   const toggleStatus = useCallback(async (sub) => {
     const newStatus = sub.status === 'active' ? 'deactivated' : 'active';
     await safeFetch(`${BACKEND_URL}/subscriptions/${sub.id}/status`, {
@@ -59,5 +66,5 @@ export default function useSubscriptions() {
     await Promise.all([fetchStats(), fetchAll()]);
   }, [fetchStats, fetchAll]);
 
-  return { subscriptions, plans, stats, loading, init, fetchAll, fetchStats, create, toggleStatus, remove };
+  return { subscriptions, plans, stats, loading, init, fetchAll, fetchStats, create, update, toggleStatus, remove };
 }

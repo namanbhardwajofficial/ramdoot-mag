@@ -9,7 +9,7 @@ import {
   BreadcrumbList,
 } from '@/components/ui/breadcrumb';
 import { HomeIcon } from '@/components/ui/icons';
-import { ADMIN_NAV, INFLUENCER_NAV ,User_NAV} from '@/config/constants';
+import { ADMIN_NAV, INFLUENCER_NAV, USER_NAV } from '@/config/constants';
 
 // Human labels for known path segments — sourced from the nav config so they
 // stay in sync, plus a few extras. Unknown segments fall back to Title Case.
@@ -20,8 +20,6 @@ const LABELS = {
       ...ADMIN_NAV.footer,
       ...INFLUENCER_NAV.main,
       ...INFLUENCER_NAV.footer,
-      ...User_NAV.main,
-      ...User_NAV.footer
     ].map((i) => [i.key, i.label])
   ),
   home: 'Home',
@@ -42,13 +40,7 @@ export default function AppBreadcrumb({ className = '' }) {
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean); // e.g. ['admin', 'users']
   const base = segments[0] || '';
-  const HOME_PATHS = {
-  admin: '/admin/home',
-  influencer: '/influencer',
-  user: '/user/home',
-};
-
-const homeHref = HOME_PATHS[base] || '/';
+  const homeHref = base === 'influencer' ? '/influencer' : '/admin/home';
 
   // Crumbs after the section base, dropping a redundant 'home' segment.
   const rest = segments.slice(1).filter((s) => s !== 'home');

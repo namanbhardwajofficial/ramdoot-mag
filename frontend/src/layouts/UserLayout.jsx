@@ -1,22 +1,20 @@
 import Nav from "@/components/nav";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import TopBar from "@/components/ui/top-bar";
-import { Outlet, useLocation, useNavigate } from "react-router";
-import { User_NAV } from "../config/constants";
+import { Outlet, useLocation } from "react-router";
+import { USER_NAV } from "../config/constants";
 
 function UserLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
 
-  const activePage =
-    location.pathname.split("/")[2] || "home";
+  const activePage = location.pathname.split("/")[2] || "home";
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[#f0eeef]">
       <Nav
         activePage={activePage}
-        items={User_NAV.main}
-        footerItems={User_NAV.footer}
+        items={USER_NAV.main}
+        footerItems={USER_NAV.footer}
         basePath="/user"
       />
 
