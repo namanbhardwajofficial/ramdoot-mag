@@ -4,9 +4,13 @@ import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
 import { EyeIcon, TrashIcon, PenIcon } from '@/components/ui/icons';
+import useUsers from '@/hooks/useUsers';
 import Button from '@/components/Button.jsx';
+import UserDetailView from '@/components/users/UserDetailView';
+import UserEditView from '@/components/users/UserEditView';
 import { CHART_COLORS } from '@/config/theme';
 import { ORG, USER_STATUSES } from '@/config/constants';
+import dummyUsers from '@/data/dummyUsers.js'
 
 const VIEWS = {
   DASHBOARD: 'dashboard',
@@ -24,98 +28,7 @@ const dummyStats = {
   inactiveUsers: 2182,
 };
 
-const dummyUsers = [
-  {
-    id: 'user_2130403',
-    name: 'Atharv Kelwadkar',
-    status: 'Active',
-    subscription: 'Paid',
-    subscriptionPlan: 'Monthly ₹449',
-    lastActive: '2 days ago',
-    totalSpent: 3294,
-    joinedOn: '2020-10-17',
-  },
-  {
-    id: 'user_2130404',
-    name: 'Riya Sharma',
-    status: 'Suspended',
-    subscription: 'Free',
-    subscriptionPlan: 'Basic Plan',
-    lastActive: '12 days ago',
-    totalSpent: 1000,
-    joinedOn: '2020-10-22',
-  },
-  {
-    id: 'user_2130405',
-    name: 'Karan Mehta',
-    status: 'Blocked',
-    subscription: 'Paid',
-    subscriptionPlan: 'Yearly ₹3999',
-    lastActive: '92 days ago',
-    totalSpent: 2000,
-    joinedOn: '2020-02-01',
-  },
-  {
-    id: 'user_2130406',
-    name: 'Sneha Verma',
-    status: 'Active',
-    subscription: 'Paid',
-    subscriptionPlan: 'Monthly ₹449',
-    lastActive: '1 day ago',
-    totalSpent: 2000,
-    joinedOn: '2020-09-06',
-  },
-  {
-    id: 'user_2130407',
-    name: 'Arjun Kapoor',
-    status: 'Inactive',
-    subscription: 'Free',
-    subscriptionPlan: 'Trial Plan',
-    lastActive: '95 days ago',
-    totalSpent: 4000,
-    joinedOn: '2020-05-24',
-  },
-  {
-    id: 'user_2130408',
-    name: 'Meera Joshi',
-    status: 'Active',
-    subscription: 'Paid',
-    subscriptionPlan: 'Quarterly ₹1199',
-    lastActive: '12 days ago',
-    totalSpent: 1000,
-    joinedOn: '2020-05-24',
-  },
-  {
-    id: 'user_2130409',
-    name: 'Kabir Singh',
-    status: 'Suspended',
-    subscription: 'Paid',
-    subscriptionPlan: 'Yearly ₹3999',
-    lastActive: '23 days ago',
-    totalSpent: 27000,
-    joinedOn: '2020-09-21',
-  },
-  {
-    id: 'user_2130410',
-    name: 'Ananya Rao',
-    status: 'Active',
-    subscription: 'Free',
-    subscriptionPlan: 'Basic Plan',
-    lastActive: '24 days ago',
-    totalSpent: 42000,
-    joinedOn: '2020-09-08',
-  },
-  {
-    id: 'user_2130411',
-    name: 'Dev Malhotra',
-    status: 'Blocked',
-    subscription: 'Paid',
-    subscriptionPlan: 'Monthly ₹449',
-    lastActive: '24 days ago',
-    totalSpent: 80000,
-    joinedOn: '2020-09-08',
-  },
-];
+
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -140,6 +53,8 @@ export default function Users() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const { updateUser,suspendUser } = useUsers();
+   const [dummyUser] = useState(dummyUsers);
 
   function handleDelete(id) {
     console.log('Delete user:', id);
@@ -201,7 +116,7 @@ export default function Users() {
   key: 'status',
   label: 'Account Status',
   render: (v) => (
-    <StatusBadge status={String(v).toLowerCase()} />
+    <StatusBadge status={v} />
   ),
 },
     {
@@ -235,20 +150,24 @@ export default function Users() {
   ];
 
   if (view === VIEWS.DETAIL && selectedUser) {
-    return (
-      <div>
-        <button
+   if (view === VIEWS.DETAIL && selectedUser) {
+       return (
+        <div>
+           <button
           onClick={() => setView(VIEWS.DASHBOARD)}
           className="mb-4 text-sm text-slate-600 cursor-pointer"
         >
           ← Back
         </button>
-
-        <h1 className="text-2xl font-bold mb-2">User Detail</h1>
-        <p>{selectedUser.name}</p>
-      </div>
-    );
+         <UserDetailView
+           user={selectedUser}
+           onBack={() => { setSelectedUser(null); setView(VIEWS.DASHBOARD); }}
+           onEdit={() => setView(VIEWS.EDIT)}
+         />
+       </div>       
+       );
   }
+}
 
   
   if (view === VIEWS.EDIT && selectedUser) {
@@ -261,8 +180,14 @@ export default function Users() {
           ← Back
         </button>
 
-        <h1 className="text-2xl font-bold mb-2">User Detail Edit</h1>
-        <p>{selectedUser.name}</p>
+         <UserEditView
+                user={selectedUser}
+                updateUser={updateUser}
+                suspendUser={suspendUser}
+                onCancel={() => setView(VIEWS.DETAIL)}
+                onSaved={(updated) => { setSelectedUser((prev) => ({ ...prev, ...updated })); setView(VIEWS.DETAIL); }}
+                onExit={() => { setSelectedUser(null); setView(VIEWS.DASHBOARD); }}
+              />
       </div>
     );
   }
@@ -293,7 +218,7 @@ export default function Users() {
         onSearchChange={setSearch}
       />
 
-      <DataTable columns={columns} data={dummyUsers} loading={false} />
+      <DataTable columns={columns} data={dummyUser} loading={false} />
     </>
   );
 }
@@ -396,7 +321,7 @@ export default function Users() {
           onSearchChange={setSearch}
         />
 
-        <DataTable columns={columns} data={dummyUsers} loading={false} />
+        <DataTable columns={columns} data={dummyUser} loading={false} />
 
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-slate-400">
