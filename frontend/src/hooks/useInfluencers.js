@@ -1,11 +1,44 @@
 import { useState, useCallback } from 'react';
-import { BACKEND_URL } from '@/config/constants';
+import { adminApi, campaignsApi, usersApi, listOf, lc } from '@/lib/api';
 
-async function safeFetch(url, opts) {
-  const res = await fetch(url, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+function mapInfluencer(i) {
+  return {
+    ...i,
+    name: i.fullName,
+    status: lc(i.status),
+    activeCampaigns: i._count?.campaigns ?? 0,
+    platforms: [],
+    totalEarning: 0,
+    roi: '—',
+  };
+}
+
+function mapCampaign(c) {
+  return {
+    ...c,
+    influencerName: c.influencer?.fullName || '—',
+    startingDate: c.startDate,
+    totalClicks: c._count?.clickEvents ?? 0,
+    clickConversion: c._count?.conversions ?? 0,
+    status: lc(c.status),
+    commissionEarned: 0,
+    totalRevenue: 0,
+  };
+}
+
+function applyFilters(rows, filters) {
+  let out = rows;
+  if (filters.status) out = out.filter((r) => r.status === lc(filters.status));
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    out = out.filter(
+      (r) =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q) ||
+        (r.influencerName || '').toLowerCase().includes(q),
+    );
+  }
+  return out;
 }
 
 export default function useInfluencers() {
@@ -15,23 +48,26 @@ export default function useInfluencers() {
 
   const fetchInfluencers = useCallback(async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('search', filters.search);
-      const data = await safeFetch(`${BACKEND_URL}/influencers?${params}`);
-      setInfluencers(Array.isArray(data) ? data : []);
-    } catch (err) { console.error('fetchInfluencers', err); }
+      const res = await adminApi.influencers();
+      const rows = (res?.influencers || []).map(mapInfluencer);
+      setInfluencers(applyFilters(rows, filters));
+    } catch (err) {
+      console.error('fetchInfluencers', err);
+    }
   }, []);
 
   const fetchCampaigns = useCallback(async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('search', filters.search);
-      if (filters.influencerId) params.set('influencerId', filters.influencerId);
-      const data = await safeFetch(`${BACKEND_URL}/campaigns?${params}`);
-      setCampaigns(Array.isArray(data) ? data : []);
-    } catch (err) { console.error('fetchCampaigns', err); }
+      const res = await campaignsApi.list({
+        status: filters.status ? String(filters.status).toUpperCase() : undefined,
+        limit: 100,
+      });
+      let rows = listOf(res).map(mapCampaign);
+      if (filters.influencerId) rows = rows.filter((c) => c.influencerId === filters.influencerId);
+      setCampaigns(applyFilters(rows, { search: filters.search }));
+    } catch (err) {
+      console.error('fetchCampaigns', err);
+    }
   }, []);
 
   const init = useCallback(async () => {
@@ -40,32 +76,62 @@ export default function useInfluencers() {
     setLoading(false);
   }, [fetchInfluencers, fetchCampaigns]);
 
-  const getInfluencer = useCallback(async (id) => safeFetch(`${BACKEND_URL}/influencers/${id}`), []);
-  const getInfluencerCampaigns = useCallback(async (id) => safeFetch(`${BACKEND_URL}/influencers/${id}/campaigns`), []);
-  const getInfluencerAudience = useCallback(async (id) => safeFetch(`${BACKEND_URL}/influencers/${id}/audience`), []);
-  const getInfluencerPayments = useCallback(async (id) => safeFetch(`${BACKEND_URL}/influencers/${id}/payments`), []);
-  const getCampaignFinancials = useCallback(async (id) => safeFetch(`${BACKEND_URL}/campaigns/${id}/financials`), []);
-  const getCampaign = useCallback(async (id) => safeFetch(`${BACKEND_URL}/campaigns/${id}`), []);
+  const getInfluencer = useCallback(async (id) => {
+    try {
+      const res = await adminApi.influencers();
+      const found = (res?.influencers || []).find((i) => i.id === id);
+      return found ? mapInfluencer(found) : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
-  const createCampaign = useCallback(async (form) => {
-    const camp = await safeFetch(`${BACKEND_URL}/campaigns`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
-    });
-    await fetchCampaigns();
-    return camp;
-  }, [fetchCampaigns]);
+  const getInfluencerCampaigns = useCallback(async (id) => {
+    const res = await campaignsApi.list({ limit: 100 }).catch(() => ({ data: [] }));
+    return listOf(res).map(mapCampaign).filter((c) => c.influencerId === id);
+  }, []);
 
-  const restrictInfluencer = useCallback(async (id) => {
-    await safeFetch(`${BACKEND_URL}/influencers/${id}/status`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'suspended' }),
-    });
-    await fetchInfluencers();
-  }, [fetchInfluencers]);
+  // No dedicated endpoints for these yet — return safe empties.
+  const getInfluencerAudience = useCallback(async () => ({}), []);
+  const getInfluencerPayments = useCallback(async () => [], []);
+  const getCampaignFinancials = useCallback(async () => ({}), []);
+
+  const getCampaign = useCallback(async (id) => {
+    const c = await campaignsApi.get(id);
+    return mapCampaign(c);
+  }, []);
+
+  const createCampaign = useCallback(
+    async (form) => {
+      const camp = await campaignsApi.create(form);
+      await fetchCampaigns();
+      return camp;
+    },
+    [fetchCampaigns],
+  );
+
+  const restrictInfluencer = useCallback(
+    async (id) => {
+      await usersApi.setStatus(id, 'SUSPENDED');
+      await fetchInfluencers();
+    },
+    [fetchInfluencers],
+  );
 
   return {
-    influencers, campaigns, loading, init,
-    fetchInfluencers, fetchCampaigns,
-    getInfluencer, getInfluencerCampaigns, getInfluencerAudience, getInfluencerPayments,
-    getCampaign, getCampaignFinancials, createCampaign, restrictInfluencer,
+    influencers,
+    campaigns,
+    loading,
+    init,
+    fetchInfluencers,
+    fetchCampaigns,
+    getInfluencer,
+    getInfluencerCampaigns,
+    getInfluencerAudience,
+    getInfluencerPayments,
+    getCampaign,
+    getCampaignFinancials,
+    createCampaign,
+    restrictInfluencer,
   };
 }

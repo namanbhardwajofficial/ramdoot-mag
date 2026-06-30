@@ -4,12 +4,13 @@ import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.webp';
 import { FiHelpCircle, FiEye } from "react-icons/fi";
-import { BACKEND_URL } from '@/config/constants';
+import { authApi, saveAuth, routeForRole } from '@/lib/api';
 
 const Login = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -19,17 +20,10 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const res = await fetch(`${BACKEND_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Login failed');
-
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            navigate('/admin'); // Redirect to dashboard
+            const data = await authApi.login(email.trim(), password, rememberMe);
+            saveAuth(data);
+            // Send each role to its own area of the app.
+            navigate(routeForRole(data.user?.role));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -122,7 +116,7 @@ const Login = () => {
                     
                     <div className="flex justify-between items-center mb-6 lg:mb-0">
                         <div className="flex gap-2 items-center">
-                            <input type="checkbox" className="cursor-pointer w-4 h-4 rounded border-gray-300" name="remember" id="remember" />
+                            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="cursor-pointer w-4 h-4 rounded border-gray-300" name="remember" id="remember" />
                             <label className="font-medium text-black/70 text-xs lg:text-sm cursor-pointer" htmlFor="remember" >Remember for 30 days</label>
                         </div>
                         <p className="font-bold lg:font-medium text-xs lg:text-sm cursor-pointer hover:underline text-black">Forgot password</p>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StatCard, { MiniChart } from '@/components/ui/stat-card';
 import DataTable from '@/components/ui/data-table';
 import { CHART_COLORS } from '@/config/theme';
 import { ORG } from '@/config/constants';
 import Button from "@/components/Button.jsx";
+import { adminApi, magazinesApi, listOf } from '@/lib/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Dummy data for the big campaign chart
@@ -18,6 +19,35 @@ const campaignData = [
 ];
 
 export default function AdminDashboard() {
+  const [counts, setCounts] = useState(null);
+  const [magRows, setMagRows] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const dash = await adminApi.dashboard();
+        if (alive) setCounts(dash?.counts || null);
+      } catch (err) { console.warn('admin dashboard', err.message); }
+      try {
+        const mags = listOf(await magazinesApi.list({ limit: 5 })).map((m) => ({
+          id: m.id,
+          name: m.title,
+          clicks: m.viewsCount ?? 0,
+          conversions: m.readsCount ?? 0,
+          revenue: Number(m.price ?? 0),
+          published: m.publishedAt
+            ? new Date(m.publishedAt).toLocaleDateString('en-IN')
+            : '—',
+        }));
+        if (alive) setMagRows(mags);
+      } catch (err) { console.warn('dashboard magazines', err.message); }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
+
   // Magazines Table Columns - Matching your user list style
   const magazineColumns = [
     {
@@ -64,16 +94,16 @@ export default function AdminDashboard() {
 
       {/* 3. Top Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Total Revenue" value="₹ 2,75,197" color={CHART_COLORS.success} trend="up" isCurrency />
-        <StatCard title="Paid Users" value="1,22,182" color={CHART_COLORS.success} trend="up" />
+        <StatCard title="Total Revenue" value={counts ? inr(counts.revenueYTD) : '₹ 0'} color={CHART_COLORS.success} trend="up" isCurrency />
+        <StatCard title="Active Subscriptions" value={counts ? counts.activeSubscriptions.toLocaleString('en-IN') : '0'} color={CHART_COLORS.success} trend="up" />
         <div className="bg-white rounded-xl border border-slate-200 p-5">
            <div className="flex items-center justify-between mb-1">
              <span className="text-sm font-medium text-slate-700">Magazine Sales</span>
              <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
            </div>
            <div className="flex items-baseline gap-2 mt-2">
-             <span className="text-3xl font-bold text-slate-900">5,368</span>
-             <span className="text-xs text-slate-500">copies sold</span>
+             <span className="text-3xl font-bold text-slate-900">{counts ? counts.totalMagazines.toLocaleString('en-IN') : '0'}</span>
+             <span className="text-xs text-slate-500">magazines</span>
            </div>
            <MiniChart color={CHART_COLORS.success} trend="up" />
         </div>
@@ -120,7 +150,7 @@ export default function AdminDashboard() {
             <div className="flex justify-center mb-6">
                <div className="relative w-32 h-32 flex items-center justify-center rounded-full border-10 border-slate-100 border-t-indigo-500 border-l-indigo-300">
                   <div className="text-center">
-                    <div className="text-sm font-bold text-slate-900 leading-tight">1.2M</div>
+                    <div className="text-sm font-bold text-slate-900 leading-tight">{counts ? counts.totalUsers.toLocaleString('en-IN') : '0'}</div>
                     <div className="text-[10px] text-slate-400">Total</div>
                   </div>
                </div>
@@ -162,7 +192,7 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-semibold text-slate-900">Magazines Publications</h2>
             <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
         </div>
-        <DataTable columns={magazineColumns} data={dummyMagazines} />
+        <DataTable columns={magazineColumns} data={magRows.length ? magRows : dummyMagazines} />
       </section>
     </div>
   );

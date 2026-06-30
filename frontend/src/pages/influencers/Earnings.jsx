@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import DataTable from '@/components/ui/data-table';
@@ -6,6 +6,41 @@ import StatusBadge from '@/components/ui/status-badge';
 import Button from '@/components/Button.jsx';
 import { CalendarIcon } from '@/components/ui/icons';
 import { ORG } from '@/config/constants';
+import { earningsApi, campaignsApi, listOf, lc } from '@/lib/api';
+
+function fmtDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
+
+function mapEarnCampaign(c) {
+  const clicks = c._count?.clickEvents ?? 0;
+  const conv = c._count?.conversions ?? 0;
+  return {
+    id: c.id,
+    name: c.name,
+    startingDate: fmtDate(c.startDate),
+    totalClicks: clicks,
+    clickConversions: conv,
+    conversions: clicks ? `${Math.round((conv / clicks) * 100)}%` : '0%',
+    commission: 0,
+  };
+}
+
+function mapInvoice(p) {
+  return {
+    id: p.id,
+    name: `Payout #${String(p.id).slice(0, 6)}`,
+    billingDate: fmtDate(p.createdAt),
+    status: lc(p.status),
+    amount: Number(p.amount ?? 0),
+    paidBy: 'Admin',
+  };
+}
 
 const FILTERS = ['All', '1 Month', '6 Month', '1 Year', 'Custom'];
 
@@ -63,6 +98,34 @@ function SummaryCard({ label, value, caption, data, gradientId }) {
 export default function Earnings() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
+  const [earnings, setEarnings] = useState(null);
+  const [campRows, setCampRows] = useState(campaigns);
+  const [invoiceRows, setInvoiceRows] = useState(invoices);
+
+  useEffect(() => {
+    let alive = true;
+    earningsApi
+      .overview()
+      .then((res) => { if (alive && res) setEarnings(res); })
+      .catch((err) => console.warn('earnings', err.message));
+    campaignsApi
+      .list({ limit: 50 })
+      .then((res) => {
+        const items = listOf(res).map(mapEarnCampaign);
+        if (alive && items.length) setCampRows(items);
+      })
+      .catch((err) => console.warn('campaigns', err.message));
+    earningsApi
+      .payouts()
+      .then((res) => {
+        const items = listOf(res).map(mapInvoice);
+        if (alive && items.length) setInvoiceRows(items);
+      })
+      .catch((err) => console.warn('payouts', err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const campaignColumns = [
     { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800">{v}</span> },
@@ -132,8 +195,8 @@ export default function Earnings() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-        <SummaryCard label="Commission Earning" value="₹ 1,22,000" caption="In Total" data={commissionTrend} gradientId="commissionEarning" />
-        <SummaryCard label="Payout Available" value="₹ 12,000" caption="In your account" data={payoutTrend} gradientId="payoutAvailable" />
+        <SummaryCard label="Commission Earning" value={earnings ? inr(earnings.totalEarnings) : '₹ 0'} caption="In Total" data={commissionTrend} gradientId="commissionEarning" />
+        <SummaryCard label="Payout Available" value={earnings ? inr(earnings.availableBalance) : '₹ 0'} caption="In your account" data={payoutTrend} gradientId="payoutAvailable" />
       </div>
 
       {/* Campaigns Commissions */}
@@ -142,7 +205,7 @@ export default function Earnings() {
           <h2 className="text-xl font-bold text-slate-900">Campaigns Commissions</h2>
           <p className="text-sm text-slate-500">View all the earning report from all your links and shares from</p>
         </div>
-        <DataTable columns={campaignColumns} data={campaigns} />
+        <DataTable columns={campaignColumns} data={campRows} />
       </section>
 
       {/* Paid Invoices */}
@@ -151,7 +214,7 @@ export default function Earnings() {
           <h2 className="text-xl font-bold text-slate-900">Paid Invoices</h2>
           <p className="text-sm text-slate-500">View all the earning report from all your links and shares from</p>
         </div>
-        <DataTable columns={invoiceColumns} data={invoices} />
+        <DataTable columns={invoiceColumns} data={invoiceRows} />
       </section>
     </div>
   );

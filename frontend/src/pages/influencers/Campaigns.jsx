@@ -1,8 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import DataTable from '@/components/ui/data-table';
 import Button from '@/components/Button.jsx';
 import { ORG } from '@/config/constants';
+import { campaignsApi, listOf } from '@/lib/api';
+
+function fmtDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+// Backend campaign -> the row shape this table expects.
+function mapCampaignRow(c) {
+  const clicks = c._count?.clickEvents ?? 0;
+  const conv = c._count?.conversions ?? 0;
+  return {
+    id: c.id,
+    name: c.name,
+    startingDate: fmtDate(c.startDate),
+    totalClicks: clicks,
+    clickConversions: conv,
+    conversions: clicks ? `${Math.round((conv / clicks) * 100)}%` : '0%',
+    commission: 0,
+  };
+}
 
 const campaigns = [
   { id: 1, name: 'Campaign Name 1', startingDate: '22 Jan 2025', totalClicks: 2128, clickConversions: 200, conversions: '20%', commission: 12000 },
@@ -20,6 +44,21 @@ const TOTAL_PAGES = 10;
 export default function Campaigns() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(campaigns);
+
+  useEffect(() => {
+    let alive = true;
+    campaignsApi
+      .list({ limit: 50 })
+      .then((res) => {
+        const items = listOf(res).map(mapCampaignRow);
+        if (alive && items.length) setRows(items);
+      })
+      .catch((err) => console.warn('campaigns', err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const columns = [
     { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800">{v}</span> },
@@ -47,7 +86,7 @@ export default function Campaigns() {
         </p>
       </header>
 
-      <DataTable columns={columns} data={campaigns} />
+      <DataTable columns={columns} data={rows} />
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">

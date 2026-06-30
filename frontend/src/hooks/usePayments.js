@@ -1,11 +1,28 @@
 import { useState, useCallback } from 'react';
-import { BACKEND_URL } from '@/config/constants';
+import { paymentsApi, earningsApi, listOf, lc } from '@/lib/api';
 
-async function safeFetch(url, opts) {
-  const res = await fetch(url, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+// NOTE: the backend exposes only the *current user's* payments (/payments/me)
+// and payouts (/earnings/payouts) — there is no admin-wide list yet, so for an
+// admin these tables are real but typically empty.
+function mapPayment(p) {
+  return {
+    ...p,
+    userName: p.user?.fullName || '—',
+    magazineTitle: p.description || '—',
+    amount: Number(p.amount ?? 0),
+    status: lc(p.status),
+  };
+}
+
+function mapPayout(p) {
+  return {
+    ...p,
+    influencerName: p.user?.fullName || p.influencer?.fullName || '—',
+    influencerId: p.userId || p.influencerId,
+    amount: Number(p.amount ?? 0),
+    status: lc(p.status),
+    campaignLink: p.campaign?.name || '—',
+  };
 }
 
 export default function usePayments() {
@@ -16,26 +33,38 @@ export default function usePayments() {
 
   const fetchPayments = useCallback(async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('search', filters.search);
-      const data = await safeFetch(`${BACKEND_URL}/payments?${params}`);
-      setPayments(Array.isArray(data) ? data : []);
-    } catch (err) { console.error('fetchPayments', err); }
+      let rows = listOf(await paymentsApi.mine()).map(mapPayment);
+      if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
+      setPayments(rows);
+    } catch (err) {
+      console.error('fetchPayments', err);
+    }
   }, []);
 
   const fetchPayouts = useCallback(async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('search', filters.search);
-      const data = await safeFetch(`${BACKEND_URL}/payments/influencer-payouts?${params}`);
-      setPayouts(Array.isArray(data) ? data : []);
-    } catch (err) { console.error('fetchPayouts', err); }
+      let rows = listOf(await earningsApi.payouts()).map(mapPayout);
+      if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
+      setPayouts(rows);
+    } catch (err) {
+      console.error('fetchPayouts', err);
+    }
   }, []);
 
   const fetchStats = useCallback(async () => {
-    try { setStats(await safeFetch(`${BACKEND_URL}/payments/stats`)); } catch (err) { console.error('fetchStats', err); }
+    try {
+      const rows = listOf(await paymentsApi.mine()).map(mapPayment);
+      const sum = (s) =>
+        rows.filter((p) => p.status === s).reduce((a, p) => a + p.amount, 0);
+      setStats({
+        totalRevenue: sum('success'),
+        successful: rows.filter((p) => p.status === 'success').length,
+        failed: rows.filter((p) => p.status === 'failed').length,
+        refunded: rows.filter((p) => p.status === 'refunded').length,
+      });
+    } catch (err) {
+      console.error('fetchPaymentStats', err);
+    }
   }, []);
 
   const init = useCallback(async () => {
@@ -44,15 +73,9 @@ export default function usePayments() {
     setLoading(false);
   }, [fetchStats, fetchPayments, fetchPayouts]);
 
-  const retryPayment = useCallback(async (id) => {
-    await safeFetch(`${BACKEND_URL}/payments/${id}/retry`, { method: 'POST' });
-    await fetchPayments();
-  }, [fetchPayments]);
-
-  const refundPayment = useCallback(async (id) => {
-    await safeFetch(`${BACKEND_URL}/payments/${id}/refund`, { method: 'POST' });
-    await fetchPayments();
-  }, [fetchPayments]);
+  // No retry/refund endpoints yet — refresh so the UI stays consistent.
+  const retryPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
+  const refundPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
 
   return { payments, payouts, stats, loading, init, fetchPayments, fetchPayouts, fetchStats, retryPayment, refundPayment };
 }

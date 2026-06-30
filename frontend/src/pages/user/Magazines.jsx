@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MagazineCollection, {
   ViewToggle,
 } from "@/components/user/MagazineCollection";
 import USER_MAGAZINES from "@/data/userMagazines";
+import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 
 /**
  * Magazine catalogue. Defaults to the block/grid layout
@@ -11,6 +12,21 @@ import USER_MAGAZINES from "@/data/userMagazines";
  */
 export default function Magazines() {
   const [view, setView] = useState("grid");
+  const [mags, setMags] = useState(USER_MAGAZINES);
+
+  useEffect(() => {
+    let alive = true;
+    magazinesApi
+      .list({ status: "LIVE", limit: 24 })
+      .then((res) => {
+        const items = listOf(res).map(toMagazineCard);
+        if (alive && items.length) setMags(items);
+      })
+      .catch((err) => console.warn("magazines", err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div>
@@ -24,7 +40,7 @@ export default function Magazines() {
         <ViewToggle view={view} onChange={setView} />
       </div>
 
-      <MagazineCollection magazines={USER_MAGAZINES} view={view} />
+      <MagazineCollection magazines={mags} view={view} />
     </div>
   );
 }

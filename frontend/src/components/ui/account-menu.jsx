@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { clearAuth } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserIcon, LogOutIcon, ChevronDownIcon } from "@/components/ui/icons";
 
@@ -57,8 +58,7 @@ export default function AccountMenu({ onNavigate }) {
   }, [open]);
 
   function handleSignOut() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuth();
     setOpen(false);
     if (onNavigate) onNavigate();
     navigate("/login");

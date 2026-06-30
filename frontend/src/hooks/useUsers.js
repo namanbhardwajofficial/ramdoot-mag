@@ -1,11 +1,52 @@
 import { useState, useCallback } from 'react';
-import { BACKEND_URL } from '@/config/constants';
+import { usersApi, listOf, lc } from '@/lib/api';
 
-async function safeFetch(url, opts) {
-  const res = await fetch(url, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+// Backend user entity -> the row shape the Users table/detail expects.
+function mapUser(u) {
+  const subscribed = (u._count?.userSubscriptions ?? 0) > 0;
+  return {
+    ...u,
+    name: u.fullName,
+    status: lc(u.status),
+    role: lc(u.role),
+    subscription: subscribed ? 'Subscribed' : 'None',
+    subscriptionPlan: '',
+    lastActive: u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—',
+    totalSpent: 0,
+    joinedOn: u.createdAt,
+  };
+}
+
+function computeStats(list) {
+  const by = (s) => list.filter((u) => u.status === s).length;
+  return {
+    totalUsers: list.length,
+    activeUsers: by('active'),
+    inactiveUsers: by('inactive'),
+    paidUsers: list.filter((u) => u.subscription === 'Subscribed').length,
+    churnedUsers: by('blocked') + by('suspended'),
+    paidChange: '',
+  };
+}
+
+function toRole(role) {
+  const r = String(role || 'User').toUpperCase();
+  if (r === 'ADMIN') return 'ADMIN';
+  if (r === 'INFLUENCER') return 'INFLUENCER';
+  return 'USER';
 }
 
 export default function useUsers() {
@@ -15,17 +56,24 @@ export default function useUsers() {
 
   const fetchAll = useCallback(async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('search', filters.search);
-      if (filters.sort) params.set('sort', filters.sort);
-      const data = await safeFetch(`${BACKEND_URL}/users?${params}`);
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (err) { console.error('fetchUsers', err); }
+      const res = await usersApi.list({
+        search: filters.search || undefined,
+        status: filters.status ? String(filters.status).toUpperCase() : undefined,
+        limit: 100,
+      });
+      setUsers(listOf(res).map(mapUser));
+    } catch (err) {
+      console.error('fetchUsers', err);
+    }
   }, []);
 
   const fetchStats = useCallback(async () => {
-    try { setStats(await safeFetch(`${BACKEND_URL}/users/stats`)); } catch (err) { console.error('fetchStats', err); }
+    try {
+      const res = await usersApi.list({ limit: 100 });
+      setStats(computeStats(listOf(res).map(mapUser)));
+    } catch (err) {
+      console.error('fetchUserStats', err);
+    }
   }, []);
 
   const init = useCallback(async () => {
@@ -34,51 +82,57 @@ export default function useUsers() {
     setLoading(false);
   }, [fetchStats, fetchAll]);
 
-  const createUser = useCallback(async (form) => {
-    const user = await safeFetch(`${BACKEND_URL}/users`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
-    });
-    await Promise.all([fetchStats(), fetchAll()]);
-    return user;
-  }, [fetchStats, fetchAll]);
+  const createUser = useCallback(
+    async (form) => {
+      const user = await usersApi.create({
+        email: form.email,
+        fullName: form.name || form.fullName,
+        phone: form.phone || undefined,
+        role: toRole(form.role),
+      });
+      await Promise.all([fetchStats(), fetchAll()]);
+      return user;
+    },
+    [fetchStats, fetchAll],
+  );
 
-  const deactivateUser = useCallback(async (id) => {
-    const user = await safeFetch(`${BACKEND_URL}/users/${id}/status`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'suspended' }),
-    });
-    await Promise.all([fetchStats(), fetchAll()]);
-    return user;
-  }, [fetchStats, fetchAll]);
+  // Only a status change exists for other users on the backend.
+  const suspendUser = useCallback(
+    async (id, payload = {}) => {
+      const status = String(payload.status || 'suspended').toUpperCase();
+      const user = await usersApi.setStatus(id, status);
+      await Promise.all([fetchStats(), fetchAll()]);
+      return user;
+    },
+    [fetchStats, fetchAll],
+  );
 
-  const removeUser = useCallback(async (id) => {
-    await safeFetch(`${BACKEND_URL}/users/${id}`, { method: 'DELETE' });
-    await Promise.all([fetchStats(), fetchAll()]);
-  }, [fetchStats, fetchAll]);
+  const deactivateUser = useCallback((id) => suspendUser(id, { status: 'suspended' }), [suspendUser]);
 
-  // --- Stubbed actions (no backend yet). Replace the body of each with a real
-  //     request when the API lands; callers/UI won't need to change. ---
+  // No hard-delete endpoint; closest real action is blocking the account.
+  const removeUser = useCallback((id) => suspendUser(id, { status: 'blocked' }), [suspendUser]);
 
-  const updateUser = useCallback(async (id, form) => {
-    // TODO: replace with real request, e.g.
-    // return safeFetch(`${BACKEND_URL}/users/${id}`, {
-    //   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
-    // });
-    await new Promise((r) => setTimeout(r, 700));
-    console.info('[stub] updateUser', id, form);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...form } : u)));
-    return { id, ...form };
-  }, []);
+  // No admin profile-edit endpoint; push a status change if present, else local-only.
+  const updateUser = useCallback(
+    async (id, form) => {
+      if (form?.status) await suspendUser(id, { status: form.status });
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...form } : u)));
+      return { id, ...form };
+    },
+    [suspendUser],
+  );
 
-  const suspendUser = useCallback(async (id, payload) => {
-    // TODO: replace with real request, e.g.
-    // return safeFetch(`${BACKEND_URL}/users/${id}/status`, {
-    //   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-    // });
-    await new Promise((r) => setTimeout(r, 900));
-    console.info('[stub] suspendUser', id, payload);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: payload.status || 'suspended' } : u)));
-    return { id, ...payload };
-  }, []);
-
-  return { users, stats, loading, init, fetchAll, fetchStats, createUser, deactivateUser, updateUser, suspendUser, removeUser };
+  return {
+    users,
+    stats,
+    loading,
+    init,
+    fetchAll,
+    fetchStats,
+    createUser,
+    deactivateUser,
+    updateUser,
+    suspendUser,
+    removeUser,
+  };
 }

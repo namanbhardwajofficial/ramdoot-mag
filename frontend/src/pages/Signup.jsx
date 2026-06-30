@@ -4,7 +4,8 @@ import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.webp';
 import { FiHelpCircle, FiEye, FiRefreshCw, FiChevronDown, FiChevronLeft } from "react-icons/fi";
-import { BACKEND_URL } from '@/config/constants';
+import { authApi, saveAuth, routeForRole } from '@/lib/api';
+import { toastSuccess } from '@/lib/confirm';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -24,23 +25,38 @@ const Signup = () => {
 
     const handleNext = async () => {
         if (step === 2) {
-            // Validate step 2
+            // Validate step 2 (mirror the backend password rules for friendlier errors)
             if (!formData.password || formData.password !== formData.confirmPassword) {
                 setError('Passwords do not match or are empty');
                 return;
             }
+            if (
+                formData.password.length < 8 ||
+                !/[a-z]/.test(formData.password) ||
+                !/[A-Z]/.test(formData.password) ||
+                !/\d/.test(formData.password)
+            ) {
+                setError('Password must be at least 8 characters and include uppercase, lowercase, and a number');
+                return;
+            }
 
-            // Moving to OTP step
+            // Trigger backend signup step 1 -> generates & "sends" the OTP.
             setLoading(true);
             setError('');
             try {
-                const res = await fetch(`${BACKEND_URL}/auth/send-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: formData.email })
+                const data = await authApi.signupStep1({
+                    email: formData.email.trim(),
+                    fullName: formData.fullName.trim(),
+                    phone: formData.phoneNo,
+                    countryCode: '+91',
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+                // In development the backend returns the OTP in the response (no real
+                // email is sent), so prefill it to make local testing painless.
+                if (data?.otp) {
+                    const digits = String(data.otp).padEnd(6, ' ').slice(0, 6).split('').map((d) => d.trim());
+                    setFormData((prev) => ({ ...prev, otp: digits }));
+                    toastSuccess(`Dev OTP: ${data.otp}`);
+                }
                 setStep(3);
             } catch (err) {
                 setError(err.message);
@@ -71,25 +87,16 @@ const Signup = () => {
         setLoading(true);
         setError('');
         const otpString = formData.otp.join('');
-        
-        try {
-            const res = await fetch(`${BACKEND_URL}/auth/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    fullName: formData.fullName,
-                    email: formData.email,
-                    phone: formData.phoneNo,
-                    password: formData.password,
-                    otp: otpString 
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Signup failed');
 
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            navigate('/admin');
+        try {
+            const data = await authApi.signupStep2({
+                email: formData.email.trim(),
+                otp: otpString,
+                password: formData.password,
+            });
+            saveAuth(data);
+            // New accounts are created with the USER role.
+            navigate(routeForRole(data.user?.role));
         } catch (err) {
             setError(err.message);
         } finally {

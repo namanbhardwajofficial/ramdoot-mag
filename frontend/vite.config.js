@@ -13,6 +13,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    // Backend (NestJS) runs on 3000; keep the frontend on 3001, which is in
+    // the backend's CORS_ORIGINS allowlist.
+    port: 3001,
+    strictPort: true,
   },
 });

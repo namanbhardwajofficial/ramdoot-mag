@@ -1,26 +1,43 @@
-# Dependencies
 node_modules/
-**/node_modules/
+dist/
+.turbo/
+coverage/
 
-# Environment variables
+# Environment files
 .env
 .env.local
-**/.env
-
-# Build outputs
-dist/
-build/
-**/dist/
-**/build/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+.env.production
+.env.staging
 
 # Logs
 *.log
-npm-debug.log*
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeORM / Database
+database/migrations/
+*.generated.ts
+
+# Uploads
+uploads/
+temp/
+
+# Docker
+docker-data/
+
+# Test
+test/reports/
+
+# Misc
+*.tsbuildinfo

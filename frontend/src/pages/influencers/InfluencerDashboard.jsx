@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import Button from '@/components/Button.jsx';
 import { ChevronRightIcon, ChevronDownIcon } from '@/components/ui/icons';
 import { CHART_COLORS } from '@/config/theme';
+import { ORG } from '@/config/constants';
+import { earningsApi, campaignsApi, magazinesApi, listOf } from '@/lib/api';
 
 // Mini trend series for the Earning / Payout cards.
 const earningTrend = [10, 14, 11, 18, 16, 24, 21, 30, 27, 38].map((v) => ({ v }));
@@ -79,6 +81,41 @@ function MetricCard({ title, value, change, data, gradientId }) {
 }
 
 export default function InfluencerDashboard() {
+  const [earnings, setEarnings] = useState(null);
+  const [campCount, setCampCount] = useState(null);
+  const [mags, setMags] = useState(sponsoredMagazines);
+
+  useEffect(() => {
+    let alive = true;
+    earningsApi
+      .overview()
+      .then((res) => { if (alive && res) setEarnings(res); })
+      .catch((err) => console.warn('earnings', err.message));
+    campaignsApi
+      .list({ limit: 100 })
+      .then((res) => { if (alive) setCampCount(listOf(res).length); })
+      .catch((err) => console.warn('campaigns', err.message));
+    magazinesApi
+      .list({ status: 'LIVE', limit: 4 })
+      .then((res) => {
+        const items = listOf(res).map((m) => ({
+          id: m.id,
+          title: m.title,
+          desc: m.shortDescription || m.description || '',
+          clicks: `${(m.viewsCount ?? 0).toLocaleString('en-IN')} Clicks`,
+        }));
+        if (alive && items.length) setMags(items);
+      })
+      .catch((err) => console.warn('magazines', err.message));
+    return () => { alive = false; };
+  }, []);
+
+  const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
+  const liveStats = [
+    { id: 'links', value: campCount != null ? String(campCount) : promoStats[0].value, label: 'Live Links' },
+    { id: 'codes', value: campCount != null ? String(campCount).padStart(2, '0') : promoStats[1].value, label: 'Promo Code' },
+  ];
+
   return (
     <div className="p-1">
       {/* Page title */}
@@ -93,14 +130,14 @@ export default function InfluencerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
         <MetricCard
           title="Earning"
-          value="₹ 2,000"
+          value={earnings ? inr(earnings.totalEarnings) : '₹ 0'}
           change="100%"
           data={earningTrend}
           gradientId="earningGradient"
         />
         <MetricCard
           title="Payout"
-          value="₹ 12,000"
+          value={earnings ? inr(earnings.completedPayouts) : '₹ 0'}
           change="100%"
           data={payoutTrend}
           gradientId="payoutGradient"
@@ -110,7 +147,7 @@ export default function InfluencerDashboard() {
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">Live Promo Code &amp; Links</h3>
           <div className="space-y-3">
-            {promoStats.map((stat) => (
+            {liveStats.map((stat) => (
               <button
                 key={stat.id}
                 type="button"
@@ -135,7 +172,7 @@ export default function InfluencerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {sponsoredMagazines.map((mag) => (
+          {mags.map((mag) => (
             <article
               key={mag.id}
               className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 hover:shadow-md transition-shadow"

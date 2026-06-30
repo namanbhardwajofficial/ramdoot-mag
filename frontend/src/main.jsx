@@ -3,8 +3,9 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
-import { BACKEND_URL } from "@/config/constants.js";
 import dummyMagazines from "@/data/dummyMagazines.js";
+import RequireAuth from "@/components/RequireAuth.jsx";
+import { magazinesApi, toMagazineCard } from "@/lib/api";
 
 // Landing is the homepage entry — keep it eager so it paints immediately.
 import Landing from "./pages/Landing.jsx";
@@ -48,7 +49,7 @@ const router = createBrowserRouter([
   },
   {
     path: "admin",
-    element: withSuspense(<AdminLayout />),
+    element: <RequireAuth role="ADMIN">{withSuspense(<AdminLayout />)}</RequireAuth>,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<AdminDashboard />) },
@@ -57,11 +58,13 @@ const router = createBrowserRouter([
         path: "magazines",
         element: withSuspense(<Magazines />),
         loader: async () => {
+          // GET /magazines is public; fall back to sample data if the API is down.
           try {
-            const res = await fetch(`${BACKEND_URL}/magazines`);
-            return await res.json();
+            const page = await magazinesApi.list({ limit: 12 });
+            const items = Array.isArray(page?.data) ? page.data : [];
+            return items.map(toMagazineCard);
           } catch (err) {
-            console.log("Backend not running:", err);
+            console.warn("Magazines API unavailable, using sample data:", err.message);
             return dummyMagazines;
           }
         },
@@ -84,7 +87,7 @@ const router = createBrowserRouter([
   },
   {
     path: "influencer",
-    element: withSuspense(<InfluencerLayout />),
+    element: <RequireAuth role="INFLUENCER">{withSuspense(<InfluencerLayout />)}</RequireAuth>,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<InfluencerDashboard />) },
@@ -99,7 +102,7 @@ const router = createBrowserRouter([
   },
   {
     path: "user",
-    element: withSuspense(<UserLayout />),
+    element: <RequireAuth role="USER">{withSuspense(<UserLayout />)}</RequireAuth>,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<UserHome />) },

@@ -1,7 +1,9 @@
+import { useState, useEffect } from "react";
 import Button from "@/components/Button.jsx";
 import { ORG } from "@/config/constants";
 import { CheckCircleIcon } from "@/components/ui/icons";
 import { toastSuccess } from "@/lib/confirm";
+import { subscriptionsApi, listOf } from "@/lib/api";
 
 /**
  * Subscription plans page — a hero panel with the featured plan card floating
@@ -22,6 +24,32 @@ const PLAN = {
 };
 
 export default function Subscriptions() {
+  const [plan, setPlan] = useState(PLAN);
+
+  useEffect(() => {
+    let alive = true;
+    subscriptionsApi
+      .plans()
+      .then((res) => {
+        const plans = listOf(res);
+        if (!alive || !plans.length) return;
+        const p = plans[0];
+        setPlan({
+          ...PLAN,
+          name: p.name,
+          price: Number(p.price ?? PLAN.price),
+          cadence: p.billingCycle
+            ? `per ${String(p.billingCycle).toLowerCase().replace("ly", "")}`
+            : PLAN.cadence,
+          tagline: p.description || PLAN.tagline,
+        });
+      })
+      .catch((err) => console.warn("plans", err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <section className="relative">
       {/* Hero panel — kept tall on desktop so the floating card sits centered
@@ -38,25 +66,25 @@ export default function Subscriptions() {
       {/* Featured plan card */}
       <div className="mt-6 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:absolute lg:right-8 lg:top-1/2 lg:mt-0 lg:w-80 lg:-translate-y-1/2">
         <div className="bg-btn-primary py-2.5 text-center text-sm font-medium text-white">
-          {PLAN.badge}
+          {plan.badge}
         </div>
 
         <div className="p-6">
-          <p className="text-sm font-medium text-slate-700">{PLAN.name}</p>
+          <p className="text-sm font-medium text-slate-700">{plan.name}</p>
 
           <div className="mt-2 flex items-start gap-1">
             <span className="mt-1 text-2xl font-bold text-slate-900">
               {ORG.currencySymbol}
             </span>
             <span className="text-5xl font-bold leading-none text-slate-900">
-              {PLAN.price}
+              {plan.price}
             </span>
             <span className="mt-auto mb-1 text-sm text-slate-500">
-              {PLAN.cadence}
+              {plan.cadence}
             </span>
           </div>
 
-          <p className="mt-2 text-sm text-slate-500">{PLAN.tagline}</p>
+          <p className="mt-2 text-sm text-slate-500">{plan.tagline}</p>
 
           <div className="mt-5">
             <Button
@@ -77,7 +105,7 @@ export default function Subscriptions() {
             </p>
 
             <ul className="mt-4 space-y-3">
-              {PLAN.features.map((feature, i) => (
+              {plan.features.map((feature, i) => (
                 <li
                   key={i}
                   className="flex items-center gap-3 text-sm text-slate-600"
