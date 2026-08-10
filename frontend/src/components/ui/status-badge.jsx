@@ -1,7 +1,7 @@
 import { STATUS_COLORS } from '@/config/constants';
 
 export default function StatusBadge({ status }) {
-  const c = STATUS_COLORS[status] ?? STATUS_COLORS.expired;
+  const c = STATUS_COLORS[String(status).toLowerCase()] ?? STATUS_COLORS.expired;
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text}`}

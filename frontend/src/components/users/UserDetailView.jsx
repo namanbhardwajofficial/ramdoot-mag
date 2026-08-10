@@ -158,7 +158,7 @@ export default function UserDetailView({ user, onBack, onEdit }) {
           <div>
             <div className="flex items-center gap-3 mb-0.5">
               <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
-              <StatusBadge status={user.status} />
+               <StatusBadge status={user.status} />
             </div>
             <div className="text-sm text-slate-400 mb-1">#{user.id?.replace('user_', '') ?? user.id}</div>
             <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">

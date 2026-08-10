@@ -27,7 +27,22 @@ export const ADMIN_NAV = {
     { key: "help", label: "Help" },
   ],
 };
+export const User_NAV = {
+  main: [
+    { key: "home", label: "Home" },
+    { key: "users", label: "Users" },
+    { key: "subscriptions", label: "Subscriptions" },
+    { key: "influencer-campaigns", label: "Influencers Campaigns" },
+    { key: "publications", label: "Publications" },
+    { key: "payments", label: "Payments" },
+    {key: "security",label:"Security"}
+  ],
 
+  footer: [
+    { key: "settings", label: "Settings" },
+    { key: "help", label: "Help" },
+  ],
+};
 export const INFLUENCER_NAV = {
   main: [
     { key: "home", label: "Dashboard" },
