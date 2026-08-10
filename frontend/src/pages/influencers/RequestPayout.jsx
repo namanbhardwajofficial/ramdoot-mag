@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import Button from '@/components/Button.jsx';
 import PayoutRequestedDrawer from '@/components/influencers/PayoutRequestedDrawer';
+import { earningsApi, getStoredUser } from '@/lib/api';
+import { toastError } from '@/lib/confirm';
 
 const trend = [10, 14, 12, 20, 17, 25, 22, 30, 27, 36].map((v) => ({ v }));
 
@@ -96,21 +98,81 @@ export default function RequestPayout() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [stats, setStats] = useState({ commission: 0, available: 0 });
   const [form, setForm] = useState({
-    fullName: 'Atharv Kelwadkar',
-    phone: '9136840260',
-    email: 'atharv@ramdootfoundation.com',
-    accountHolder: 'Atharv Sevak Kelwadkar',
-    withdrawAmount: '10600',
+    fullName: '',
+    phone: '',
+    email: '',
+    accountHolder: '',
+    withdrawAmount: '',
     accountType: 'Savings',
-    bankName: 'HDFC BANK',
-    accountNumber: '123456789012',
-    confirmAccountNumber: '123456789012',
-    ifsc: 'HDFC0001234',
-    upi: 'atharv@okaxis',
+    bankName: '',
+    accountNumber: '',
+    confirmAccountNumber: '',
+    ifsc: '',
+    upi: '',
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  useEffect(() => {
+    // Prefill personal details from the signed-in user.
+    const u = getStoredUser();
+    if (u) {
+      setForm((f) => ({
+        ...f,
+        fullName: u.fullName || '',
+        phone: u.phone || '',
+        email: u.email || '',
+        accountHolder: u.fullName || '',
+      }));
+    }
+    // Load real earnings for the summary cards + default the withdrawal amount.
+    earningsApi
+      .overview()
+      .then((e) => {
+        const commission = Number(e?.totalEarnings ?? 0);
+        const available = Number(e?.availableBalance ?? 0);
+        setStats({ commission, available });
+        setForm((f) =>
+          f.withdrawAmount ? f : { ...f, withdrawAmount: available > 0 ? String(available) : '' },
+        );
+      })
+      .catch((err) => console.warn('earnings', err.message));
+  }, []);
+
+  async function handleRequest() {
+    if (form.accountNumber !== form.confirmAccountNumber) {
+      toastError('Account numbers do not match');
+      return;
+    }
+    const amount = Number(form.withdrawAmount);
+    if (!amount || amount <= 0) {
+      toastError('Enter a valid withdrawal amount');
+      return;
+    }
+    if (!form.accountHolder || !form.bankName || !form.accountNumber || !form.ifsc) {
+      toastError('Please fill in all bank details');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const account = await earningsApi.addBankAccount({
+        holderName: form.accountHolder,
+        bankName: form.bankName,
+        accountNumber: form.accountNumber,
+        ifscCode: form.ifsc,
+        isDefault: true,
+      });
+      await earningsApi.withdraw({ amount, bankAccountId: account.id });
+      setSuccess(true);
+    } catch (err) {
+      toastError(err.message || 'Payout request failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="p-1">
@@ -122,8 +184,8 @@ export default function RequestPayout() {
             <p className="text-sm text-slate-500 mt-1">View all the earning report from all your links and shares from</p>
           </div>
 
-          <MiniStat label="Commission Earning" value="22,182" />
-          <MiniStat label="Payout Available" value="2,182" />
+          <MiniStat label="Commission Earning" value={stats.commission.toLocaleString('en-IN')} />
+          <MiniStat label="Payout Available" value={stats.available.toLocaleString('en-IN')} />
 
           <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-sky-300 via-sky-400 to-blue-500 p-5">
             <div className="absolute -right-3 -top-3 text-6xl opacity-90 select-none">🪙</div>
@@ -223,7 +285,7 @@ export default function RequestPayout() {
             {step === 0 ? (
               <Button text="Next" handler={() => setStep(1)} width="100%" />
             ) : (
-              <Button text="Request" handler={() => setSuccess(true)} width="100%" />
+              <Button text="Request" handler={handleRequest} loading={submitting} width="100%" />
             )}
             <p className="text-center text-xs text-slate-400 mt-3">
               Trouble withdrawing funds?{' '}

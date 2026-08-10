@@ -19,7 +19,7 @@ import usePublications from "@/hooks/usePublications";
 import { ORG, PUBLICATION_STATUSES } from "@/config/constants";
 import { CHART_COLORS } from "@/config/theme";
 import Button from "@/components/Button.jsx";
-import { toastSuccess } from "@/lib/confirm";
+import { toastSuccess, toastError } from "@/lib/confirm";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -76,6 +76,7 @@ export default function Publications() {
       setView(VIEWS.DASHBOARD);
     } catch (err) {
       console.error("Failed to publish", err);
+      toastError(err.message || "Failed to publish magazine");
     }
   }
 

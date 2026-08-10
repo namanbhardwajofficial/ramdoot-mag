@@ -1,17 +1,10 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import DataTable from '@/components/ui/data-table';
 import StatusBadge from '@/components/ui/status-badge';
 import { ORG } from '@/config/constants';
+import { earningsApi, listOf, lc } from '@/lib/api';
 
-const requests = [
-  { id: 'r1', formId: '#12332124', date: '22 Jan 2025', status: 'initiated', funds: 12000, remaining: 12000 },
-  { id: 'r2', formId: '#12332124', date: '20 Jan 2025', status: 'success', funds: 1400, remaining: 1400 },
-  { id: 'r3', formId: '#12332124', date: '24 Jan 2025', status: 'success', funds: 9280, remaining: 9280 },
-  { id: 'r4', formId: '#12332124', date: '26 Jan 2025', status: 'success', funds: 1000, remaining: 1000 },
-  { id: 'r5', formId: '#12332124', date: '26 Jan 2025', status: 'failed', funds: 1000, remaining: 1000 },
-];
-
-const money = (v) => `${ORG.currencySymbol} ${v.toLocaleString('en-IN')}`;
+const money = (v) => `${ORG.currencySymbol} ${Number(v || 0).toLocaleString('en-IN')}`;
 
 const columns = [
   { key: 'formId', label: 'Form ID', render: (v) => <span className="font-medium text-slate-800">{v}</span> },
@@ -22,6 +15,33 @@ const columns = [
 ];
 
 export default function RequestedPayout() {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    earningsApi
+      .payouts()
+      .then((res) => {
+        if (!alive) return;
+        setRows(
+          listOf(res).map((p) => ({
+            id: p.id,
+            formId: `#${String(p.id).slice(0, 8)}`,
+            date: p.createdAt
+              ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+              : '—',
+            status: lc(p.status),
+            funds: Number(p.amount || 0),
+            remaining: Number(p.amount || 0),
+          })),
+        );
+      })
+      .catch((err) => console.warn('payouts', err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="p-1">
       <header className="mb-6">
@@ -29,7 +49,7 @@ export default function RequestedPayout() {
         <p className="text-sm text-slate-500 mt-1">View all the earning report from all your links and shares from</p>
       </header>
 
-      <DataTable columns={columns} data={requests} />
+      <DataTable columns={columns} data={rows} />
     </div>
   );
 }

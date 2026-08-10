@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router';
 import {
   Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
@@ -7,8 +8,12 @@ import Button from '@/components/Button.jsx';
 import PromoCodeDrawer from '@/components/influencers/PromoCodeDrawer';
 import ShareCampaignDrawer from '@/components/influencers/ShareCampaignDrawer';
 import { toastSuccess } from '@/lib/confirm';
+import { campaignsApi, trackingUrl } from '@/lib/api';
+import { ORG } from '@/config/constants';
 
-const CAMPAIGN_LINK = 'Atharv21i1313oqdq';
+const fmtDate = (d) =>
+  d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+const money = (v) => `${ORG.currencySymbol} ${Number(v || 0).toLocaleString('en-IN')}`;
 
 const SERIES = {
   click: { label: 'Click', color: '#4F46E5' },
@@ -68,12 +73,33 @@ function InfoCard({ label, value }) {
 }
 
 export default function CampaignDetails() {
+  const { id } = useParams();
+  const [overview, setOverview] = useState(null);
   // null = no promo code yet (shows "Create New Promo Code" flow);
   // an object = promo code created (shows promo stats + "Edit Promo Code").
   const [promo, setPromo] = useState(null);
   // 'create' | 'edit' | null (closed)
   const [promoDrawer, setPromoDrawer] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    campaignsApi
+      .overview(id)
+      .then((o) => {
+        if (!alive || !o) return;
+        setOverview(o);
+        // Campaigns are created with a promo code; surface it if present.
+        if (o.promoCode) {
+          setPromo((prev) => prev ?? { code: o.promoCode, discount: '', used: o.stats?.totalConversions ?? 0 });
+        }
+      })
+      .catch((err) => console.warn('campaign overview', err.message));
+    return () => {
+      alive = false;
+    };
+  }, [id]);
 
   function handlePromoSubmit({ code, discount }) {
     setPromo((prev) => ({ used: prev?.used ?? 1213, ...prev, code, discount }));
@@ -93,7 +119,7 @@ export default function CampaignDetails() {
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
             <p className="text-xs text-slate-400">Campaign Name</p>
-            <h1 className="text-2xl font-bold text-slate-900 mt-0.5">Ramdoot magazine promo Atharv</h1>
+            <h1 className="text-2xl font-bold text-slate-900 mt-0.5">{overview?.name || 'Campaign'}</h1>
             <div className="flex items-center gap-4 mt-2">
               {Object.values(SERIES).map((s) => (
                 <LegendDot key={s.label} color={s.color} label={s.label} />
@@ -129,7 +155,7 @@ export default function CampaignDetails() {
         {/* Total Commission Earned (spans both rows) */}
         <div className="lg:row-span-2 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
           <p className="text-xs text-slate-400">Total Commission Earned</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">₹ 12,000</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{money(overview?.stats?.totalCommission)}</p>
           <div className="flex-1 min-h-36 mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={commissionTrend} margin={{ top: 5, right: 0, bottom: 0, left: 0 }}>
@@ -145,8 +171,8 @@ export default function CampaignDetails() {
           </div>
         </div>
 
-        <InfoCard label="Campaign Start Date" value="30 December 2025" />
-        <InfoCard label="Campaign End Date" value="Ongoing" />
+        <InfoCard label="Campaign Start Date" value={fmtDate(overview?.startDate)} />
+        <InfoCard label="Campaign End Date" value={overview?.endDate ? fmtDate(overview.endDate) : 'Ongoing'} />
 
         {/* Campaign Sharing Medium */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-center">
@@ -206,7 +232,7 @@ export default function CampaignDetails() {
       <ShareCampaignDrawer
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        campaignLink={CAMPAIGN_LINK}
+        campaignLink={overview?.promoCode ? trackingUrl(overview.promoCode) : ''}
         promoCode={promo?.code}
       />
     </div>

@@ -4,8 +4,20 @@ import StatCard, { MiniChart } from '@/components/ui/stat-card';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
 import { EyeIcon, TrashIcon } from '@/components/ui/icons';
-import { BACKEND_URL, ORG } from '@/config/constants';
+import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+import useInfluencers from '@/hooks/useInfluencers';
+
+// Placeholder for tabs whose backing endpoint doesn't exist yet. Better than a
+// spinner that never resolves — see BACKEND_GAPS.md.
+function NotAvailable({ what }) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+      <p className="text-sm text-slate-500">{what} isn&apos;t available yet.</p>
+      <p className="mt-1 text-xs text-slate-400">This view is waiting on a backend endpoint.</p>
+    </div>
+  );
+}
 
 function Tabs({ tabs, active, onChange }) {
   return (
@@ -38,12 +50,20 @@ function Avatar({ size = 'lg' }) {
 
 function CampaignsTab({ influencerId }) {
   const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { getInfluencerCampaigns } = useInfluencers();
+
   useEffect(() => {
-    fetch(`${BACKEND_URL}/influencers/${influencerId}/campaigns`)
-      .then((r) => r.json())
-      .then((d) => setCampaigns(Array.isArray(d) ? d : []))
-      .catch(console.error);
-  }, [influencerId]);
+    let alive = true;
+    setLoading(true);
+    getInfluencerCampaigns(influencerId)
+      .then((rows) => alive && setCampaigns(rows))
+      .catch((err) => console.warn('influencerCampaigns', err.message))
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [influencerId, getInfluencerCampaigns]);
 
   const columns = [
     { key: 'name', label: 'Campaign Name' },
@@ -68,17 +88,16 @@ function CampaignsTab({ influencerId }) {
       <h2 className="text-lg font-semibold mb-1">Active Campaign</h2>
       <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
       <Toolbar statusFilter="" onStatusChange={() => {}} statusOptions={[]} search="" onSearchChange={() => {}} />
-      <DataTable columns={columns} data={campaigns} />
+      <DataTable columns={columns} data={campaigns} loading={loading} />
     </>
   );
 }
 
-function AudienceTab({ influencerId }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/influencers/${influencerId}/audience`).then((r) => r.json()).then(setData).catch(console.error);
-  }, [influencerId]);
-  if (!data) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+function AudienceTab() {
+  // No GET /influencers/:id/audience on the backend yet (refund rate, paid-vs-free
+  // split, revenue per subscriber are not derivable from anything we can call).
+  const data = null;
+  if (!data) return <NotAvailable what="Audience data" />;
   return (
     <div className="flex gap-4 flex-wrap">
       <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
@@ -112,12 +131,11 @@ function AudienceTab({ influencerId }) {
   );
 }
 
-function PaymentsTab({ influencerId }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/influencers/${influencerId}/payments`).then((r) => r.json()).then(setData).catch(console.error);
-  }, [influencerId]);
-  if (!data) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+function PaymentsTab() {
+  // No GET /influencers/:id/payments on the backend yet — /payments/me is scoped
+  // to the caller, so an admin can't read another user's payment history.
+  const data = null;
+  if (!data) return <NotAvailable what="Influencer payment history" />;
 
   const historyColumns = [
     { key: 'campaignName', label: 'Campaign Name' },
@@ -217,8 +235,8 @@ export default function InfluencerDetail({ influencer, onBack, onRestrict, onCre
   function renderTab() {
     switch (tab) {
       case 'Campaigns': return <CampaignsTab influencerId={influencer.id} />;
-      case 'Audience':  return <AudienceTab influencerId={influencer.id} />;
-      case 'Payments':  return <PaymentsTab influencerId={influencer.id} />;
+      case 'Audience':  return <AudienceTab />;
+      case 'Payments':  return <PaymentsTab />;
       default: return <div className="flex items-center justify-center h-40 text-slate-400">{tab} — Coming soon</div>;
     }
   }

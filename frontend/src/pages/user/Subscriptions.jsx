@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import Button from "@/components/Button.jsx";
 import { ORG } from "@/config/constants";
 import { CheckCircleIcon } from "@/components/ui/icons";
-import { toastSuccess } from "@/lib/confirm";
-import { subscriptionsApi, listOf } from "@/lib/api";
+import { toastSuccess, toastError } from "@/lib/confirm";
+import { subscriptionsApi, paymentsApi, listOf } from "@/lib/api";
 
 /**
  * Subscription plans page — a hero panel with the featured plan card floating
  * over its right edge. See design/User - subscriptions.png.
  */
 const PLAN = {
+  id: null,
   badge: "Most Popular",
   name: "Senior plan",
   price: 45,
@@ -23,11 +24,37 @@ const PLAN = {
   ],
 };
 
+// Random-ish provider ref for the dev payment record.
+const ref = () => Math.random().toString(36).slice(2, 12);
+
+/**
+ * Record a payment and return its id.
+ *
+ * NOTE: no Razorpay order endpoint / checkout SDK exists yet, so this creates a
+ * dev payment record straight away (the backend marks `POST /payments` as
+ * SUCCESS). When the real gateway lands, replace ONLY this function with a
+ * Razorpay checkout that resolves to the verified payment id.
+ */
+async function initiatePayment(plan) {
+  const payment = await paymentsApi.record({
+    razorpayOrderId: `order_dev_${ref()}`,
+    razorpayPaymentId: `pay_dev_${ref()}`,
+    amount: Math.round(Number(plan.price) * 100), // backend expects paise
+    relatedType: "subscription",
+    relatedId: plan.id,
+    description: `Subscription: ${plan.name}`,
+  });
+  return payment.id;
+}
+
 export default function Subscriptions() {
   const [plan, setPlan] = useState(PLAN);
+  const [mySub, setMySub] = useState(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
     let alive = true;
+
     subscriptionsApi
       .plans()
       .then((res) => {
@@ -36,6 +63,7 @@ export default function Subscriptions() {
         const p = plans[0];
         setPlan({
           ...PLAN,
+          id: p.id,
           name: p.name,
           price: Number(p.price ?? PLAN.price),
           cadence: p.billingCycle
@@ -45,10 +73,46 @@ export default function Subscriptions() {
         });
       })
       .catch((err) => console.warn("plans", err.message));
+
+    // Detect an existing active subscription so the card reflects owned state.
+    subscriptionsApi
+      .mine()
+      .then((res) => {
+        if (!alive) return;
+        const active = listOf(res).find(
+          (s) => String(s.status || "").toUpperCase() === "ACTIVE",
+        );
+        if (active) setMySub(active);
+      })
+      .catch((err) => console.warn("mine", err.message));
+
     return () => {
       alive = false;
     };
   }, []);
+
+  const owned =
+    mySub &&
+    String(mySub.status || "").toUpperCase() === "ACTIVE" &&
+    (!plan.id || mySub.planId === plan.id);
+
+  async function handleGetPlan() {
+    if (!plan.id) {
+      toastError("Plan is not available yet. Please try again in a moment.");
+      return;
+    }
+    setPurchasing(true);
+    try {
+      const paymentId = await initiatePayment(plan);
+      const sub = await subscriptionsApi.purchase({ planId: plan.id, paymentId });
+      setMySub(sub);
+      toastSuccess("Subscription activated");
+    } catch (err) {
+      toastError(err.message || "Purchase failed");
+    } finally {
+      setPurchasing(false);
+    }
+  }
 
   return (
     <section className="relative">
@@ -87,11 +151,21 @@ export default function Subscriptions() {
           <p className="mt-2 text-sm text-slate-500">{plan.tagline}</p>
 
           <div className="mt-5">
-            <Button
-              text="Get this plan"
-              width="100%"
-              handler={() => toastSuccess("Checkout coming soon")}
-            />
+            {owned ? (
+              <Button text="Current plan" width="100%" disabled />
+            ) : (
+              <Button
+                text="Get this plan"
+                width="100%"
+                handler={handleGetPlan}
+                loading={purchasing}
+              />
+            )}
+            {owned && mySub?.endDate && (
+              <p className="mt-2 text-center text-xs text-slate-500">
+                Active until {new Date(mySub.endDate).toLocaleDateString()}
+              </p>
+            )}
           </div>
 
           <div className="mt-6 border-t border-slate-100 pt-5">

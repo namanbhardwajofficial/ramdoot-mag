@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BACKEND_URL, ORG, PRICING_PLANS } from '@/config/constants';
+import { ORG, PRICING_PLANS } from '@/config/constants';
 import StatusBadge from '@/components/ui/status-badge';
 
 function StepIndicator({ currentStep }) {
@@ -50,19 +50,17 @@ function UploadBlock({ label, hint, buttonLabel }) {
   );
 }
 
-function VersionHistory({ pubId }) {
-  const [versions, setVersions] = useState([]);
-
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/publications/${pubId}/versions`)
-      .then((r) => r.json())
-      .then((d) => Array.isArray(d) ? setVersions(d) : setVersions([]))
-      .catch(console.error);
-  }, [pubId]);
+function VersionHistory() {
+  // No magazine version-history endpoint yet — magazines are updated in place
+  // with no revision table behind them. See BACKEND_GAPS.md.
+  const versions = [];
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4">
       <h3 className="text-sm font-semibold mb-4">Magazine Updates</h3>
+      {versions.length === 0 && (
+        <p className="text-xs text-slate-400">Version history isn&apos;t available yet.</p>
+      )}
       <div className="space-y-4">
         {versions.map((v, i) => (
           <div key={i} className="flex items-start gap-3">
@@ -196,7 +194,7 @@ export default function EditMagazineForm({ publication, onUpdate, onCancel }) {
             </button>
           </div>
 
-          <VersionHistory pubId={publication.id} />
+          <VersionHistory />
         </div>
       )}
     </div>

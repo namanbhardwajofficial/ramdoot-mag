@@ -1,32 +1,127 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/Button.jsx';
 import { TrashIcon, UploadIcon, CheckCircleIcon } from '@/components/ui/icons';
 import { Field, inputCls, inputWithIconCls, GreenCheck, PanelHeader } from './fields';
+import { usersApi, getStoredUser, saveAuth } from '@/lib/api';
+import { toastSuccess, toastError } from '@/lib/confirm';
+
+// The backend caps avatars at 2MB and only stores the file it is given, so
+// reject anything larger (or non-image) before spending the round trip.
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+function prettySize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function MyDetailsPanel() {
-  const [form, setForm] = useState({
-    fullName: 'Atharv Kelwadkar',
-    phone: '9136840260',
-    email: 'atharv@ramdootfoundation.com',
-  });
-  const [file, setFile] = useState({ name: 'Profile.jpg', size: '10 MB' });
+  const [form, setForm] = useState({ fullName: '', phone: '', email: '' });
+  const [saving, setSaving] = useState(false);
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  useEffect(() => {
+    let alive = true;
+    const stored = getStoredUser();
+    if (stored) {
+      setForm({
+        fullName: stored.fullName || '',
+        phone: stored.phone || '',
+        email: stored.email || '',
+      });
+    }
+    usersApi
+      .me()
+      .then((me) => {
+        if (!alive || !me) return;
+        setForm({
+          fullName: me.fullName || '',
+          phone: me.phone || '',
+          email: me.email || '',
+        });
+      })
+      .catch((err) => console.warn('me', err.message));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function handleAvatarPick(e) {
+    const picked = e.target.files?.[0];
+    // Reset the input so re-picking the same file still fires onChange.
+    e.target.value = '';
+    if (!picked) return;
+
+    if (!picked.type.startsWith('image/')) {
+      toastError('Choose a PNG or JPG image');
+      return;
+    }
+    if (picked.size > MAX_AVATAR_BYTES) {
+      toastError(`That image is ${prettySize(picked.size)} — the limit is 2 MB`);
+      return;
+    }
+
+    setFile({ name: picked.name, size: prettySize(picked.size) });
+    setUploading(true);
+    try {
+      const updated = await usersApi.uploadAvatar(picked);
+      saveAuth({ user: { ...getStoredUser(), ...updated } });
+      toastSuccess('Profile picture updated');
+    } catch (err) {
+      setFile(null);
+      toastError(err.message || 'Could not upload that image');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleUpdate() {
+    setSaving(true);
+    try {
+      const updated = await usersApi.updateMe({
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      });
+      saveAuth({ user: { ...getStoredUser(), ...updated } });
+      toastSuccess('Profile updated');
+    } catch (err) {
+      toastError(err.message || 'Could not update profile');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
       <PanelHeader title="Personal Info" subtitle="Update your photo and personal details" />
 
       <p className="text-sm font-semibold text-slate-700 mb-2">Add Profile Picture</p>
-      <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg"
+        onChange={handleAvatarPick}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+      >
         <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500">
           <UploadIcon className="w-5 h-5" />
         </div>
         <p className="text-sm text-slate-600">
           <span className="font-semibold text-indigo-600">Click to upload</span> or drag and drop
         </p>
-        <p className="text-xs text-slate-400 mt-1">PNG or JPG (max size 10MB)</p>
-      </div>
+        <p className="text-xs text-slate-400 mt-1">PNG or JPG (max size 2MB)</p>
+      </button>
 
       {file && (
         <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
@@ -39,9 +134,13 @@ export default function MyDetailsPanel() {
               <p className="text-xs text-slate-400 flex items-center gap-1.5">
                 {file.size}
                 <span className="text-slate-300">|</span>
-                <span className="inline-flex items-center gap-1 text-emerald-600">
-                  <CheckCircleIcon className="w-3.5 h-3.5" /> 100%
-                </span>
+                {uploading ? (
+                  <span className="text-slate-500">Uploading…</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-emerald-600">
+                    <CheckCircleIcon className="w-3.5 h-3.5" /> 100%
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -75,7 +174,12 @@ export default function MyDetailsPanel() {
           </div>
         </Field>
 
-        <Button text="Update" handler={() => {}} width="100%" />
+        <Button
+          text="Update"
+          handler={handleUpdate}
+          loading={saving}
+          width="100%"
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BACKEND_URL } from '@/config/constants';
 import { CHART_COLORS, GRAPH_THEMES } from '@/config/theme';
+import { paymentsApi, listOf } from '@/lib/api';
 
 const CHART_H = 220;
 const CHART_W = 700;
@@ -10,20 +10,55 @@ function toPath(points) {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ');
 }
 
+// There is no GET /payments/chart — build the monthly series client-side from
+// the caller's payment rows. Only COMPLETED payments count as revenue; `payout`
+// has no source on this endpoint (payouts live under /earnings/payouts, which is
+// influencer-scoped), so that series stays flat at 0 until an admin-wide
+// payouts endpoint exists. See BACKEND_GAPS.md.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function toMonthlySeries(payments) {
+  // Last 12 months, oldest first, so the x-axis reads left-to-right.
+  const now = new Date();
+  const buckets = [];
+  const index = new Map();
+  for (let i = 11; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    index.set(key, buckets.length);
+    buckets.push({ month: MONTHS[d.getMonth()], revenue: 0, payout: 0 });
+  }
+
+  payments.forEach((p) => {
+    if (String(p.status).toUpperCase() !== 'COMPLETED') return;
+    const d = new Date(p.createdAt);
+    const slot = index.get(`${d.getFullYear()}-${d.getMonth()}`);
+    if (slot === undefined) return;
+    buckets[slot].revenue += Number(p.amount || 0);
+  });
+
+  return buckets;
+}
+
 export default function PaymentsChart() {
   const [data, setData] = useState([]);
   const [active, setActive] = useState({ revenue: true, payout: true });
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/payments/chart`)
-      .then((r) => r.json())
-      .then(setData)
-      .catch(console.error);
+    let alive = true;
+    paymentsApi
+      .mine()
+      .then((res) => alive && setData(toMonthlySeries(listOf(res))))
+      .catch((err) => console.warn('paymentsChart', err.message));
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (!data.length) return null;
 
-  const maxVal = Math.max(...data.map((d) => Math.max(d.revenue, d.payout)));
+  // Floor at 1 so a month with no completed payments doesn't divide by zero.
+  const maxVal = Math.max(1, ...data.map((d) => Math.max(d.revenue, d.payout)));
   const yScale = (v) => PAD.top + (1 - v / maxVal) * (CHART_H - PAD.top - PAD.bottom);
   const xScale = (i) => PAD.left + (i / (data.length - 1)) * (CHART_W - PAD.left - PAD.right);
 

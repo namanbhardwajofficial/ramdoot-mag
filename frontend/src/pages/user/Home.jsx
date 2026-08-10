@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import MagazineCollection, {
   ViewToggle,
 } from "@/components/user/MagazineCollection";
@@ -10,6 +11,7 @@ import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
  * See design/User - home.png.
  */
 export default function Home() {
+  const navigate = useNavigate();
   const [view, setView] = useState("list");
   const [mags, setMags] = useState(USER_MAGAZINES);
 
@@ -52,7 +54,11 @@ export default function Home() {
           <ViewToggle view={view} onChange={setView} />
         </div>
 
-        <MagazineCollection magazines={mags} view={view} />
+        <MagazineCollection
+          magazines={mags}
+          view={view}
+          onRead={(m) => navigate(`/user/magazines/${m.id}`)}
+        />
       </section>
     </div>
   );

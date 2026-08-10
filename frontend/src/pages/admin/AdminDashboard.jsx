@@ -21,6 +21,8 @@ const campaignData = [
 export default function AdminDashboard() {
   const [counts, setCounts] = useState(null);
   const [magRows, setMagRows] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [logs, setLogs] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -29,6 +31,14 @@ export default function AdminDashboard() {
         const dash = await adminApi.dashboard();
         if (alive) setCounts(dash?.counts || null);
       } catch (err) { console.warn('admin dashboard', err.message); }
+      try {
+        const a = await adminApi.analytics();
+        if (alive) setAnalytics(a || null);
+      } catch (err) { console.warn('admin analytics', err.message); }
+      try {
+        const res = await adminApi.auditLogs({ limit: 6 });
+        if (alive) setLogs(listOf(res));
+      } catch (err) { console.warn('audit logs', err.message); }
       try {
         const mags = listOf(await magazinesApi.list({ limit: 5 })).map((m) => ({
           id: m.id,
@@ -156,8 +166,9 @@ export default function AdminDashboard() {
                </div>
             </div>
             <ul className="space-y-2 mb-6">
-              <li className="flex justify-between text-xs"><span className="text-slate-500">Paid Users</span> <span className="font-semibold text-slate-800">5,48,991 (52%)</span></li>
-              <li className="flex justify-between text-xs"><span className="text-slate-500">Unpaid Users</span> <span className="font-semibold text-slate-800">2,75,197 (14%)</span></li>
+              <li className="flex justify-between text-xs"><span className="text-slate-500">New This Month</span> <span className="font-semibold text-slate-800">{analytics ? analytics.overview.newUsersThisMonth.toLocaleString('en-IN') : '—'}</span></li>
+              <li className="flex justify-between text-xs"><span className="text-slate-500">Active Campaigns</span> <span className="font-semibold text-slate-800">{analytics ? analytics.overview.activeCampaigns.toLocaleString('en-IN') : '—'}</span></li>
+              <li className="flex justify-between text-xs"><span className="text-slate-500">Active Subscriptions</span> <span className="font-semibold text-slate-800">{analytics ? analytics.overview.subscriptionsActive.toLocaleString('en-IN') : '—'}</span></li>
             </ul>
           </div>
           <Button text="View Details" width="w-full" />
@@ -193,6 +204,34 @@ export default function AdminDashboard() {
             <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
         </div>
         <DataTable columns={magazineColumns} data={magRows.length ? magRows : dummyMagazines} />
+      </section>
+
+      {/* 7. Recent Activity (audit logs) */}
+      <section className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+          <p className="text-sm text-slate-500">Latest admin actions across the platform</p>
+        </div>
+        {logs.length === 0 ? (
+          <p className="text-sm text-slate-400 py-6 text-center">No recent activity</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {logs.map((l) => (
+              <li key={l.id} className="flex items-center justify-between py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">
+                    {(l.action || 'action').replace(/_/g, ' ')}
+                    {l.entityType ? <span className="text-slate-400"> · {l.entityType}</span> : null}
+                  </p>
+                  <p className="text-xs text-slate-400">{l.actor?.fullName || l.actor?.email || 'System'}</p>
+                </div>
+                <span className="text-xs text-slate-400 shrink-0">
+                  {l.createdAt ? new Date(l.createdAt).toLocaleString('en-IN') : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

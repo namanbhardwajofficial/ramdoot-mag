@@ -9,10 +9,14 @@ import { magazinesApi, toMagazineCard } from "@/lib/api";
 
 // Landing is the homepage entry — keep it eager so it paints immediately.
 import Landing from "./pages/Landing.jsx";
+// 404 + error boundary stay eager so they always render (even if a chunk fails).
+import NotFound from "./pages/NotFound.jsx";
+import RouteError from "./pages/RouteError.jsx";
 
 // Everything else is lazy-loaded so it stays out of the homepage's critical bundle.
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Signup = lazy(() => import("./pages/Signup.jsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
 const Users = lazy(() => import("./pages/admin/users.jsx"));
 const Magazines = lazy(() => import("@/pages/admin/magazines.jsx"));
 const Subscriptions = lazy(() => import("@/pages/admin/subscriptions.jsx"));
@@ -33,6 +37,7 @@ const InfluencerLayout = lazy(() => import("./layouts/InfluencerLayout.jsx"));
 const UserLayout = lazy(() => import("./layouts/UserLayout.jsx"));
 const UserHome = lazy(() => import("./pages/user/Home.jsx"));
 const UserMagazines = lazy(() => import("./pages/user/Magazines.jsx"));
+const UserMagazineDetail = lazy(() => import("./pages/user/MagazineDetail.jsx"));
 const UserSubscriptions = lazy(() => import("./pages/user/Subscriptions.jsx"));
 const UserSettings = lazy(() => import("./pages/user/Settings.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
@@ -50,6 +55,7 @@ const router = createBrowserRouter([
   {
     path: "admin",
     element: <RequireAuth role="ADMIN">{withSuspense(<AdminLayout />)}</RequireAuth>,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<AdminDashboard />) },
@@ -86,8 +92,13 @@ const router = createBrowserRouter([
     element: withSuspense(<Signup />),
   },
   {
+    path: "forgot-password",
+    element: withSuspense(<ForgotPassword />),
+  },
+  {
     path: "influencer",
     element: <RequireAuth role="INFLUENCER">{withSuspense(<InfluencerLayout />)}</RequireAuth>,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<InfluencerDashboard />) },
@@ -103,15 +114,18 @@ const router = createBrowserRouter([
   {
     path: "user",
     element: <RequireAuth role="USER">{withSuspense(<UserLayout />)}</RequireAuth>,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
       { path: "home", element: withSuspense(<UserHome />) },
       { path: "magazines", element: withSuspense(<UserMagazines />) },
+      { path: "magazines/:id", element: withSuspense(<UserMagazineDetail />) },
       { path: "subscriptions", element: withSuspense(<UserSubscriptions />) },
       { path: "settings", element: withSuspense(<UserSettings />) },
       { path: "help", element: withSuspense(<Help />) },
     ],
   },
+  { path: "*", element: <NotFound /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(

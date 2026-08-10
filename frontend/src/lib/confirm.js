@@ -36,3 +36,16 @@ export function toastSuccess(title = 'Done') {
     timerProgressBar: true,
   });
 }
+
+/** Show a brief error toast in the top-right corner. */
+export function toastError(title = 'Something went wrong') {
+  return Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'error',
+    title,
+    showConfirmButton: false,
+    timer: 3500,
+    timerProgressBar: true,
+  });
+}

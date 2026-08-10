@@ -60,15 +60,30 @@ export default function usePublications() {
 
   const publish = useCallback(
     async (form) => {
-      // Create the magazine, then publish it if it already has a PDF.
+      // 1. Create the magazine entry.
       const created = await magazinesApi.create({
         title: form.title || form.name,
-        shortDescription: form.shortDescription,
+        shortDescription: form.shortDescription || form.description,
         description: form.description,
-        price: form.price != null && form.price !== '' ? Number(form.price) : undefined,
+        price:
+          form.pricingPlan === 'free'
+            ? 0
+            : form.price != null && form.price !== ''
+              ? Number(form.price)
+              : undefined,
       });
+
+      // 2. Upload the PDF and/or cover image (the backend requires a PDF to publish).
+      const files = [form.pdfFile, form.coverFile].filter(Boolean);
+      if (files.length) await magazinesApi.upload(created.id, files);
+
+      // 3. Publish it, optionally notifying paid subscribers.
+      const published = await magazinesApi.publish(created.id, {
+        notifySubscribers: !!form.sendNotification,
+      });
+
       await Promise.all([fetchStats(), fetchAll()]);
-      return created;
+      return published;
     },
     [fetchStats, fetchAll],
   );

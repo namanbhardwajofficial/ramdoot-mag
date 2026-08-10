@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react';
 import Drawer from '@/components/ui/drawer';
 import StatusBanner from '@/components/ui/status-banner';
-import { BACKEND_URL, ORG } from '@/config/constants';
+import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+
+// Placeholder for tabs whose backing endpoint doesn't exist yet — better than a
+// spinner that never resolves. See BACKEND_GAPS.md.
+function NotAvailable({ what }) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+      <p className="text-sm text-slate-500">{what} isn&apos;t available yet.</p>
+      <p className="mt-1 text-xs text-slate-400">This view is waiting on a backend endpoint.</p>
+    </div>
+  );
+}
 
 function Tabs({ tabs, active, onChange }) {
   return (
@@ -86,12 +97,11 @@ function OverviewTab({ pub }) {
   );
 }
 
-function PerformanceTab({ pubId }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/publications/${pubId}/performance`).then((r) => r.json()).then(setData).catch(console.error);
-  }, [pubId]);
-  if (!data) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+function PerformanceTab() {
+  // No magazine performance endpoint yet (subscriber gain, views, dwell time are
+  // not tracked server-side at all). See BACKEND_GAPS.md.
+  const data = null;
+  if (!data) return <NotAvailable what="Performance data" />;
   return (
     <>
       <div className="flex items-center justify-between mb-2">
@@ -111,12 +121,11 @@ function PerformanceTab({ pubId }) {
   );
 }
 
-function FinancialsTab({ pubId }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/publications/${pubId}/financials`).then((r) => r.json()).then(setData).catch(console.error);
-  }, [pubId]);
-  if (!data) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+function FinancialsTab() {
+  // No per-magazine financials endpoint yet — payments carry `relatedId` but
+  // there is no aggregate-by-magazine query. See BACKEND_GAPS.md.
+  const data = null;
+  if (!data) return <NotAvailable what="Financials" />;
   return (
     <>
       <div className="grid grid-cols-2 gap-3 mb-5">
@@ -192,8 +201,8 @@ export default function MagazineDetailsDrawer({ open, publication, onClose, onDe
   function renderTab() {
     switch (tab) {
       case 'Overview':    return <OverviewTab pub={publication} />;
-      case 'Performance': return <PerformanceTab pubId={publication.id} />;
-      case 'Financials':  return <FinancialsTab pubId={publication.id} />;
+      case 'Performance': return <PerformanceTab />;
+      case 'Financials':  return <FinancialsTab />;
       case 'Actions':     return <ActionsTab pub={publication} onDeactivate={onDeactivate} />;
       default:            return null;
     }

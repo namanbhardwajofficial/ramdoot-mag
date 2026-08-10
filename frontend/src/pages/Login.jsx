@@ -119,7 +119,7 @@ const Login = () => {
                             <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="cursor-pointer w-4 h-4 rounded border-gray-300" name="remember" id="remember" />
                             <label className="font-medium text-black/70 text-xs lg:text-sm cursor-pointer" htmlFor="remember" >Remember for 30 days</label>
                         </div>
-                        <p className="font-bold lg:font-medium text-xs lg:text-sm cursor-pointer hover:underline text-black">Forgot password</p>
+                        <Link to="/forgot-password" className="font-bold lg:font-medium text-xs lg:text-sm cursor-pointer hover:underline text-black">Forgot password</Link>
                     </div>
                     
                     <div className="my-6 lg:my-5">

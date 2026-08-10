@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import Drawer from '@/components/ui/drawer';
 import PlatformBadge from './PlatformBadge';
-import { BACKEND_URL, ORG } from '@/config/constants';
+import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+import { campaignsApi } from '@/lib/api';
+
+// Placeholder for figures the backend can't produce yet — see BACKEND_GAPS.md.
+const TBD = '—';
 
 function Tabs({ tabs, active, onChange }) {
   return (
@@ -67,23 +71,57 @@ function MiniLineChart({ data, labels, color = CHART_COLORS.success, height = 80
   return <svg viewBox={`0 0 ${w} ${h}`} className="w-full" fill="none"><path d={d} stroke={color} strokeWidth="1.5" strokeLinecap="round" /></svg>;
 }
 
+// GET /campaigns/:id/overview is the only financial-ish endpoint that exists.
+// It yields commission + a daily series; gross revenue, profit, tax and payout
+// state have no source yet, so those tiles render TBD rather than fake numbers.
+function toFinancials(overview) {
+  const daily = overview?.stats?.daily?.conversions || [];
+  const commission = Number(overview?.stats?.totalCommission || 0);
+  return {
+    influencerCommission: commission,
+    chart: daily.map((d) => d.commission),
+    labels: daily.map((d) => d.date),
+    totalRevenue: null,
+    totalProfit: null,
+    profitMargin: TBD,
+    totalPayable: null,
+    paid: null,
+    taxes: TBD,
+  };
+}
+
+const money = (v) => (v == null ? TBD : `${ORG.currencySymbol}${Number(v).toLocaleString('en-IN')}`);
+
 function FinancialsTab({ campaignId }) {
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetch(`${BACKEND_URL}/campaigns/${campaignId}/financials`).then((r) => r.json()).then(setData).catch(console.error);
+    let alive = true;
+    setLoading(true);
+    campaignsApi
+      .overview(campaignId)
+      .then((res) => alive && setData(toFinancials(res)))
+      .catch((err) => console.warn('campaignFinancials', err.message))
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
   }, [campaignId]);
-  if (!data) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+
+  if (loading) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+  if (!data) return <div className="text-center py-8 text-slate-400">Could not load financials.</div>;
   return (
     <div className="space-y-3">
       <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
         <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
-        <p className="text-2xl font-bold">{ORG.currencySymbol}{data.totalRevenue?.toLocaleString('en-IN')}</p>
+        <p className="text-2xl font-bold">{money(data.totalRevenue)}</p>
         <MiniLineChart data={data.chart} labels={data.labels} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Total Profit</p>
-          <p className="text-xl font-bold">{ORG.currencySymbol}{data.totalProfit?.toLocaleString('en-IN')}</p>
+          <p className="text-xl font-bold">{money(data.totalProfit)}</p>
         </div>
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Profit Margin</p>
@@ -93,17 +131,17 @@ function FinancialsTab({ campaignId }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Influencer Commission</p>
-          <p className="text-xl font-bold">{ORG.currencySymbol}{data.influencerCommission?.toLocaleString('en-IN')}</p>
+          <p className="text-xl font-bold">{money(data.influencerCommission)}</p>
         </div>
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Total Payable</p>
-          <p className="text-xl font-bold">{ORG.currencySymbol}{data.totalPayable?.toLocaleString('en-IN')}</p>
+          <p className="text-xl font-bold">{money(data.totalPayable)}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Paid</p>
-          <p className="text-xl font-bold">{ORG.currencySymbol}{data.paid?.toLocaleString('en-IN')}</p>
+          <p className="text-xl font-bold">{money(data.paid)}</p>
         </div>
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Taxes</p>

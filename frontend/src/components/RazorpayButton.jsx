@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { BACKEND_URL, RAZORPAY_KEY_ID, ORG } from "@/config/constants";
+import { RAZORPAY_KEY_ID, ORG } from "@/config/constants";
+import { paymentsApi, getStoredUser } from "@/lib/api";
+import { toastSuccess, toastError } from "@/lib/confirm";
 
 const loadRazorpay = () =>
   new Promise((resolve) => {
@@ -11,65 +13,71 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
+/**
+ * Razorpay checkout.
+ *
+ * Flow: POST /payments/create-order opens the order and writes a PENDING
+ * payment row, then the checkout widget takes over. There is NO client-side
+ * verify call — the backend reconciles the payment from Razorpay's
+ * `POST /webhooks/razorpay` callback, so a successful `handler` here only means
+ * the user finished checkout, not that the payment is confirmed. Callers that
+ * need certainty should re-read `paymentsApi.mine()` afterwards.
+ *
+ * `amount` is in RUPEES (the backend converts to paise).
+ */
 export function useRazorpay() {
   const [loading, setLoading] = useState(false);
 
-  const pay = async ({ magazineId }) => {
-    setLoading(true);
-
-    const sdkLoaded = await loadRazorpay();
-    if (!sdkLoaded) {
-      alert("Razorpay SDK failed to load. Check your internet connection.");
-      setLoading(false);
+  const pay = async ({ amount, relatedType, relatedId, description, onSuccess } = {}) => {
+    if (!amount || amount <= 0) {
+      toastError("Nothing to pay for");
       return;
     }
 
+    setLoading(true);
     try {
-      const orderRes = await fetch(`${BACKEND_URL}/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ magazineId }),
-      });
-
-      const orderData = await orderRes.json();
-      if (!orderRes.ok) {
-        throw new Error(orderData.message || "Failed to create order");
+      const sdkLoaded = await loadRazorpay();
+      if (!sdkLoaded) {
+        toastError("Razorpay could not load. Check your internet connection.");
+        return;
       }
 
-      const options = {
-        key: RAZORPAY_KEY_ID,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: ORG.name,
-        description: orderData.magazineTitle,
-        order_id: orderData.orderId,
-        handler: async (response) => {
-          const verifyRes = await fetch(`${BACKEND_URL}/verify-payment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response, magazineId }),
-          });
+      const order = await paymentsApi.createOrder({
+        amount,
+        relatedType,
+        relatedId,
+        description,
+      });
 
-          const verifyData = await verifyRes.json();
-          if (verifyRes.ok && verifyData.status === "success") {
-            alert(`Payment successful for ${verifyData.magazineTitle}!`);
-          } else {
-            alert("Payment verification failed");
-          }
+      const user = getStoredUser();
+      const rzp = new window.Razorpay({
+        // The backend returns the key it opened the order with — prefer it so
+        // the two can never drift apart.
+        key: order.keyId || RAZORPAY_KEY_ID,
+        amount: order.amount, // already in paise
+        currency: order.currency,
+        name: ORG.name,
+        description,
+        order_id: order.orderId,
+        handler: () => {
+          toastSuccess("Payment received — we'll confirm it shortly.");
+          onSuccess?.(order);
         },
         prefill: {
-          name: "",
-          email: "",
-          contact: "",
+          name: user?.fullName || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
         },
         theme: { color: ORG.theme || "#1e293b" },
-      };
+      });
 
-      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (res) => {
+        toastError(res?.error?.description || "Payment failed");
+      });
+
       rzp.open();
     } catch (err) {
-      console.error(err);
-      alert("Something went wrong. Please try again.");
+      toastError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

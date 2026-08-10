@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ORG, PRICING_PLANS } from '@/config/constants';
+import { toastError } from '@/lib/confirm';
 
 function StepIndicator({ currentStep }) {
   const steps = [
@@ -39,11 +40,9 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-function UploadZone({ label, hint, accept }) {
-  const [files, setFiles] = useState([]);
-
+function UploadZone({ label, hint, accept, files, onFiles }) {
   function handleChange(e) {
-    setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+    onFiles((prev) => [...prev, ...Array.from(e.target.files)]);
   }
 
   return (
@@ -70,7 +69,7 @@ function UploadZone({ label, hint, accept }) {
             <p className="text-sm font-medium truncate">{f.name}</p>
             <p className="text-xs text-slate-400">{(f.size / 1024 / 1024).toFixed(1)} MB</p>
           </div>
-          <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-slate-600">
+          <button onClick={() => onFiles((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-slate-600">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -105,6 +104,9 @@ function PreviewPanel() {
 
 export default function PublishMagazineForm({ onPublish, onCancel }) {
   const [step, setStep] = useState(0);
+  const [pdfFiles, setPdfFiles] = useState([]);
+  const [coverFiles, setCoverFiles] = useState([]);
+  const [publishing, setPublishing] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -119,8 +121,22 @@ export default function PublishMagazineForm({ onPublish, onCancel }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handlePublish() {
-    onPublish(form);
+  async function handlePublish() {
+    if (!form.title.trim()) {
+      toastError('Please enter a magazine title.');
+      return;
+    }
+    // The backend rejects publishing a magazine that has no PDF.
+    if (!pdfFiles[0]) {
+      toastError('Please attach the magazine PDF before publishing.');
+      return;
+    }
+    setPublishing(true);
+    try {
+      await onPublish({ ...form, pdfFile: pdfFiles[0], coverFile: coverFiles[0] });
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
@@ -134,8 +150,8 @@ export default function PublishMagazineForm({ onPublish, onCancel }) {
             <>
               <h2 className="text-lg font-semibold mb-4">Upload Magazine</h2>
 
-              <UploadZone label="Add Magazine file" hint="PDF Version Only (max size: 10MB)" accept=".pdf" />
-              <UploadZone label="Add Cover Image" hint="Webp, PNG, JPG (max: 800x400px)" accept="image/*" />
+              <UploadZone label="Add Magazine file" hint="PDF Version Only (max size: 10MB)" accept=".pdf" files={pdfFiles} onFiles={setPdfFiles} />
+              <UploadZone label="Add Cover Image" hint="Webp, PNG, JPG (max: 800x400px)" accept="image/*" files={coverFiles} onFiles={setCoverFiles} />
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Magazine Title</label>
@@ -238,12 +254,15 @@ export default function PublishMagazineForm({ onPublish, onCancel }) {
 
               <button
                 onClick={handlePublish}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800"
+                disabled={publishing}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Publish Magazine
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                {publishing ? 'Publishing…' : 'Publish Magazine'}
+                {!publishing && (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
               </button>
             </>
           )}
