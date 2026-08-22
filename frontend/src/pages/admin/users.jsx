@@ -170,7 +170,7 @@ export default function Users() {
       <>
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Users List</h1>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Everyone registered on the platform</p>
         </header>
 
         <Toolbar
@@ -249,7 +249,7 @@ export default function Users() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold">Users List</h2>
-            <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+            <p className="text-sm text-slate-500">Everyone registered on the platform</p>
           </div>
         </div>
 

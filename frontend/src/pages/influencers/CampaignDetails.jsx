@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import {
   Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -21,22 +21,30 @@ const SERIES = {
   earnings: { label: 'Campaign Earnings', color: '#34D399' },
 };
 
-const chartData = [
-  { name: 'Jan', click: 5000, conversions: 1200, earnings: 1000 },
-  { name: 'Feb', click: 8000, conversions: 3200, earnings: 2400 },
-  { name: 'Mar', click: 7000, conversions: 5400, earnings: 2100 },
-  { name: 'Apr', click: 12000, conversions: 4200, earnings: 6800 },
-  { name: 'May', click: 9000, conversions: 8800, earnings: 5200 },
-  { name: 'Jun', click: 16000, conversions: 3200, earnings: 9800 },
-  { name: 'Jul', click: 14000, conversions: 9800, earnings: 7400 },
-  { name: 'Aug', click: 18000, conversions: 6400, earnings: 11200 },
-  { name: 'Sep', click: 17000, conversions: 10200, earnings: 9600 },
-  { name: 'Oct', click: 21000, conversions: 8200, earnings: 13400 },
-  { name: 'Nov', click: 20000, conversions: 12400, earnings: 11800 },
-  { name: 'Dec', click: 23000, conversions: 9800, earnings: 14600 },
-];
-
-const commissionTrend = [12, 18, 14, 22, 19, 28, 24, 26, 23, 31, 29, 40].map((v) => ({ v }));
+// The campaign overview returns real per-day aggregates:
+//   stats.daily.clicks      -> [{ date, count }]
+//   stats.daily.conversions -> [{ date, count, commission }]
+// Merge them into one series keyed by date. Previously this chart rendered a
+// hardcoded 12-month curve peaking at 23,000 clicks regardless of the campaign.
+function buildSeries(stats) {
+  const byDate = new Map();
+  const at = (date) => {
+    if (!byDate.has(date)) byDate.set(date, { date, click: 0, conversions: 0, earnings: 0 });
+    return byDate.get(date);
+  };
+  for (const r of stats?.daily?.clicks || []) at(r.date).click = Number(r.count) || 0;
+  for (const r of stats?.daily?.conversions || []) {
+    const row = at(r.date);
+    row.conversions = Number(r.count) || 0;
+    row.earnings = Number(r.commission) || 0;
+  }
+  return [...byDate.values()]
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map((r) => ({
+      ...r,
+      name: new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    }));
+}
 
 function LegendDot({ color, label }) {
   return (
@@ -75,6 +83,9 @@ function InfoCard({ label, value }) {
 export default function CampaignDetails() {
   const { id } = useParams();
   const [overview, setOverview] = useState(null);
+  const series = useMemo(() => buildSeries(overview?.stats), [overview]);
+  // Sparkline follows real commission per day rather than a canned curve.
+  const commissionTrend = useMemo(() => series.map((r) => ({ v: r.earnings })), [series]);
   // null = no promo code yet (shows "Create New Promo Code" flow);
   // an object = promo code created (shows promo stats + "Edit Promo Code").
   const [promo, setPromo] = useState(null);
@@ -136,8 +147,13 @@ export default function CampaignDetails() {
         </div>
 
         <div className="h-72 w-full">
+          {series.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+              No clicks or conversions recorded for this campaign yet.
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+            <LineChart data={series} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e9e7ec" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={8} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
@@ -147,6 +163,7 @@ export default function CampaignDetails() {
               <Line type="monotone" dataKey="earnings" stroke={SERIES.earnings.color} strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -157,6 +174,11 @@ export default function CampaignDetails() {
           <p className="text-xs text-slate-400">Total Commission Earned</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">{money(overview?.stats?.totalCommission)}</p>
           <div className="flex-1 min-h-36 mt-4">
+            {commissionTrend.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                No commission yet
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={commissionTrend} margin={{ top: 5, right: 0, bottom: 0, left: 0 }}>
                 <defs>
@@ -168,6 +190,7 @@ export default function CampaignDetails() {
                 <Area type="monotone" dataKey="v" stroke="#34D399" strokeWidth={2} fill="url(#commissionGradient)" />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 

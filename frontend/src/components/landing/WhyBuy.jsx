@@ -22,6 +22,9 @@ function PromoCard({ title, cta }) {
       <div className="relative max-w-[554px]">
         <p className="text-sm leading-relaxed text-white/85">{PROMO_BODY}</p>
         <div className="mt-5">
+          {/* TODO(product): these donation CTAs have no destination — the app
+              and the API have no donation flow. Needs either a donation feature
+              or an external giving link before launch. */}
           <Button text={cta} handler={() => {}} />
         </div>
       </div>

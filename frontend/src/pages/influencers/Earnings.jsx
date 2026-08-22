@@ -47,18 +47,6 @@ const FILTERS = ['All', '1 Month', '6 Month', '1 Year', 'Custom'];
 const commissionTrend = [20, 28, 24, 36, 30, 44, 38, 52, 47, 60, 55, 72].map((v) => ({ v }));
 const payoutTrend = [12, 16, 14, 22, 19, 27, 24, 30, 28, 36, 33, 44].map((v) => ({ v }));
 
-const campaigns = [
-  { id: 1, name: 'Campaign Name 1', startingDate: '22 Jan 2025', totalClicks: 2128, clickConversions: 200, conversions: '20%', commission: 12000 },
-  { id: 2, name: 'Campaign Name 2', startingDate: '20 Jan 2025', totalClicks: 382, clickConversions: 102, conversions: '10%', commission: 1400 },
-  { id: 3, name: 'Campaign Name 3', startingDate: '24 Jan 2025', totalClicks: 1021, clickConversions: 783, conversions: '12%', commission: 9280 },
-];
-
-const invoices = [
-  { id: 1, name: 'Invoice #005 - Dec 2025', billingDate: 'Dec 1, 2025', status: 'paid', amount: 10000, paidBy: 'Admin' },
-  { id: 2, name: 'Invoice #004 - Nov 2025', billingDate: 'Nov 1, 2025', status: 'paid', amount: 178335, paidBy: 'Admin' },
-  { id: 3, name: 'Invoice #003 - Oct 2025', billingDate: 'Oct 1, 2025', status: 'paid', amount: 10000, paidBy: 'Admin' },
-];
-
 function PdfIcon() {
   return (
     <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-50 text-red-500 shrink-0">
@@ -99,8 +87,8 @@ export default function Earnings() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
   const [earnings, setEarnings] = useState(null);
-  const [campRows, setCampRows] = useState(campaigns);
-  const [invoiceRows, setInvoiceRows] = useState(invoices);
+  const [campRows, setCampRows] = useState([]);
+  const [invoiceRows, setInvoiceRows] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -112,14 +100,14 @@ export default function Earnings() {
       .list({ limit: 50 })
       .then((res) => {
         const items = listOf(res).map(mapEarnCampaign);
-        if (alive && items.length) setCampRows(items);
+        if (alive) setCampRows(items);
       })
       .catch((err) => console.warn('campaigns', err.message));
     earningsApi
       .payouts()
       .then((res) => {
         const items = listOf(res).map(mapInvoice);
-        if (alive && items.length) setInvoiceRows(items);
+        if (alive) setInvoiceRows(items);
       })
       .catch((err) => console.warn('payouts', err.message));
     return () => {

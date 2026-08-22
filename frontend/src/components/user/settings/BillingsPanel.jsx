@@ -1,163 +1,201 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import { ORG } from "@/config/constants";
 import StatusBadge from "@/components/ui/status-badge";
-import { PlusIcon, FileTextIcon } from "@/components/ui/icons";
-import { SectionHeader, SquareCheck } from "./parts";
+import { FileTextIcon } from "@/components/ui/icons";
+import { SectionHeader } from "./parts";
+import { subscriptionsApi, paymentsApi, listOf, lc } from "@/lib/api";
 
 /**
- * Settings ▸ Billings — plan selection, saved payment methods and the past
- * payments table. See design/user - settings - 3.png.
+ * Settings ▸ Billings — the user's current plan and their real payment
+ * history. See design/user - settings - 3.png.
+ *
+ * There is deliberately no saved-payment-methods section: cards live with
+ * Razorpay, and the backend exposes no card vault, so the only honest thing we
+ * can show is the method recorded on each past payment.
+ *
+ * Changing plan happens on /user/subscriptions (that page runs the Razorpay
+ * checkout), so this panel links there rather than duplicating a selector.
  */
-const PLANS = [0, 1, 2];
-const METHODS = [{ id: 1 }, { id: 2 }];
-const PAYMENTS = [
-  { id: "007", date: "Dec 1, 2025" },
-  { id: "006", date: "Nov 1, 2025" },
-  { id: "005", date: "Oct 1, 2025" },
-  { id: "004", date: "Sep 1, 2025" },
-];
 
-function GPayBadge() {
+const CYCLE = { MONTHLY: "month", QUARTERLY: "quarter", YEARLY: "year" };
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function money(amount) {
+  return `${ORG.currencySymbol}${Number(amount ?? 0).toLocaleString("en-IN")}`;
+}
+
+function CurrentPlan({ sub }) {
+  const plan = sub.plan || {};
+  const cycle = CYCLE[String(plan.billingCycle || "").toUpperCase()];
+  const included = (plan.magazines || [])
+    .map((m) => m.magazine?.title)
+    .filter(Boolean);
+
   return (
-    <span className="flex h-9 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-[10px] font-semibold">
-      <span className="text-[#4285F4]">G</span>
-      <span className="text-slate-700">Pay</span>
-    </span>
+    <div className="rounded-xl border border-slate-300 p-4 ring-1 ring-slate-200">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold">{plan.name || "Subscription"}</span>{" "}
+            {money(plan.price)}
+            {cycle ? `/${cycle}` : ""}
+          </p>
+          {plan.description && (
+            <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
+          )}
+        </div>
+        <StatusBadge status={lc(sub.status) || "active"} />
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-xs text-slate-400">Started</dt>
+          <dd className="text-slate-700">{formatDate(sub.startDate)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Renews</dt>
+          <dd className="text-slate-700">{formatDate(sub.renewalDate)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Ends</dt>
+          <dd className="text-slate-700">{formatDate(sub.endDate)}</dd>
+        </div>
+      </dl>
+
+      {included.length > 0 && (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="text-xs text-slate-400">Included magazines</p>
+          <p className="mt-1 text-sm text-slate-600">{included.join(", ")}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
 export default function BillingsPanel() {
-  const [plan, setPlan] = useState(0);
-  const [method, setMethod] = useState(0);
+  const [subs, setSubs] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      subscriptionsApi
+        .mine()
+        .then((res) => {
+          if (alive) setSubs(listOf(res));
+        })
+        .catch((err) => console.warn("mine", err.message)),
+      paymentsApi
+        .mine()
+        .then((res) => {
+          if (alive) setPayments(listOf(res));
+        })
+        .catch((err) => console.warn("payments", err.message)),
+    ]).finally(() => {
+      if (alive) setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const active =
+    subs.find((s) => String(s.status || "").toUpperCase() === "ACTIVE") || null;
+
+  if (loading) {
+    return <p className="text-sm text-slate-400">Loading billing details…</p>;
+  }
 
   return (
     <div className="space-y-12">
-      {/* Billing cycle */}
+      {/* Current plan */}
       <section>
         <SectionHeader
           title="Billing Cycle"
-          subtitle="List of all the magazines you been looking for"
+          subtitle="Your current subscription and renewal dates"
         />
-        <div className="space-y-4">
-          {PLANS.map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setPlan(i)}
-              className={`flex w-full items-start justify-between gap-4 rounded-xl border p-4 text-left transition-colors ${
-                plan === i
-                  ? "border-slate-400 ring-1 ring-slate-300"
-                  : "border-slate-200 hover:border-slate-300"
-              }`}
+        {active ? (
+          <div className="space-y-4">
+            <CurrentPlan sub={active} />
+            <Link
+              to="/user/subscriptions"
+              className="inline-block text-sm font-medium text-slate-700 hover:underline"
             >
-              <div>
-                <p className="text-sm text-slate-800">
-                  <span className="font-semibold">Basic plan</span>{" "}
-                  {ORG.currencySymbol}100/month
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Includes up to 10 users, 20 GB individual data and access to
-                  all features.
-                </p>
-              </div>
-              <SquareCheck checked={plan === i} onChange={() => setPlan(i)} />
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Payment methods */}
-      <section>
-        <SectionHeader
-          title="Payment Method"
-          subtitle="List of all the magazines you been looking for"
-        />
-        <div className="space-y-4">
-          {METHODS.map((m, i) => (
-            <div
-              key={m.id}
-              className={`flex items-start justify-between gap-4 rounded-xl border p-4 ${
-                method === i
-                  ? "border-slate-400 ring-1 ring-slate-300"
-                  : "border-slate-200"
-              }`}
+              Change plan
+            </Link>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 p-6 text-center">
+            <p className="text-sm text-slate-500">
+              You don&apos;t have an active subscription.
+            </p>
+            <Link
+              to="/user/subscriptions"
+              className="mt-2 inline-block text-sm font-medium text-slate-700 hover:underline"
             >
-              <div className="flex items-start gap-3">
-                <GPayBadge />
-                <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    Visa Ending with 5674
-                  </p>
-                  <p className="text-xs text-slate-500">Expiry 20/83</p>
-                  <div className="mt-2 flex items-center gap-4 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setMethod(i)}
-                      className="font-semibold text-slate-700 hover:underline"
-                    >
-                      Set Default
-                    </button>
-                    <button
-                      type="button"
-                      className="text-slate-500 hover:underline"
-                    >
-                      Edit Details
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <SquareCheck checked={method === i} onChange={() => setMethod(i)} />
-            </div>
-          ))}
-
-          <button
-            type="button"
-            className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
-          >
-            <PlusIcon className="h-4 w-4" /> Add Payment Method
-          </button>
-        </div>
+              Browse subscription plans
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Past payments */}
       <section>
         <SectionHeader
           title="Past Payments"
-          subtitle="List of all the magazines you been looking for"
+          subtitle="Every payment recorded on your account"
         />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-130 text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-xs text-slate-500">
-                <th className="py-3 pr-4 font-medium">Invoice</th>
-                <th className="py-3 pr-4 font-medium">Billing date</th>
-                <th className="py-3 pr-4 font-medium">Status</th>
-                <th className="py-3 pr-4 font-medium">Amount</th>
-                <th className="py-3 pr-4 font-medium">Plan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {PAYMENTS.map((p) => (
-                <tr key={p.id}>
-                  <td className="py-3 pr-4">
-                    <span className="flex items-center gap-2 text-slate-700">
-                      <FileTextIcon className="h-4 w-4 text-red-500" />
-                      Invoice #{p.id} –...
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-slate-600">{p.date}</td>
-                  <td className="py-3 pr-4">
-                    <StatusBadge status="paid" />
-                  </td>
-                  <td className="py-3 pr-4 text-slate-600">
-                    {ORG.currencySymbol}100
-                  </td>
-                  <td className="py-3 pr-4 text-slate-600">Basic plan</td>
+        {payments.length === 0 ? (
+          <p className="text-sm text-slate-400">No payments yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-130 text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                  <th className="py-3 pr-4 font-medium">Payment</th>
+                  <th className="py-3 pr-4 font-medium">Date</th>
+                  <th className="py-3 pr-4 font-medium">Status</th>
+                  <th className="py-3 pr-4 font-medium">Amount</th>
+                  <th className="py-3 pr-4 font-medium">Method</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payments.map((p) => (
+                  <tr key={p.id}>
+                    <td className="py-3 pr-4">
+                      <span className="flex items-center gap-2 text-slate-700">
+                        <FileTextIcon className="h-4 w-4 text-red-500" />
+                        {p.description || "Payment"}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 text-slate-600">
+                      {formatDate(p.createdAt)}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <StatusBadge status={lc(p.status)} />
+                    </td>
+                    <td className="py-3 pr-4 text-slate-600">
+                      {money(p.amount)}
+                    </td>
+                    <td className="py-3 pr-4 text-slate-600">
+                      {p.paymentMethod || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

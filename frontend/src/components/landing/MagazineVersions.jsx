@@ -1,13 +1,15 @@
 import Button from '@/components/Button';
+import useLandingNav from './useLandingNav';
 import { BookOpenIcon, BookmarkIcon } from '@/components/ui/icons';
 
 const CARDS = Array.from({ length: 8 }, (_, i) => ({
   id: i,
   title: 'Magazines',
-  subtitle: 'List of all the magazines you been looking for',
+  subtitle: 'Read online or download — every edition, every month',
 }));
 
 function VersionCard({ title, subtitle }) {
+  const nav = useLandingNav();
   return (
     <div className="flex flex-col rounded-2xl bg-[#e9e7e8] p-2.5">
       {/* Cover */}
@@ -28,8 +30,8 @@ function VersionCard({ title, subtitle }) {
 
       {/* Actions */}
       <div className="mt-4 flex flex-col gap-2 px-1.5 pb-1.5">
-        <Button text="Read Sample" handler={() => {}} width="100%" />
-        <Button text="Subscribe" handler={() => {}} width="100%" />
+        <Button text="Read Sample" handler={nav.signup} width="100%" />
+        <Button text="Subscribe" handler={nav.subscribe} width="100%" />
       </div>
     </div>
   );

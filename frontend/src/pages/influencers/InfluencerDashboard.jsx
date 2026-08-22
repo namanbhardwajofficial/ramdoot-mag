@@ -1,35 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
-import Button from '@/components/Button.jsx';
 import { ChevronRightIcon, ChevronDownIcon } from '@/components/ui/icons';
-import { CHART_COLORS } from '@/config/theme';
 import { ORG } from '@/config/constants';
 import { earningsApi, campaignsApi, magazinesApi, listOf } from '@/lib/api';
-
-// Mini trend series for the Earning / Payout cards.
-const earningTrend = [10, 14, 11, 18, 16, 24, 21, 30, 27, 38].map((v) => ({ v }));
-const payoutTrend = [12, 17, 14, 22, 28, 25, 34, 31, 40, 46].map((v) => ({ v }));
-
-const promoStats = [
-  { id: 'links', value: '20', label: 'Live Links' },
-  { id: 'codes', value: '03', label: 'Promo Code' },
-];
-
-const sponsoredMagazines = Array.from({ length: 4 }, (_, i) => ({
-  id: i + 1,
-  title: 'Ramdoot August 2026 Edition',
-  desc: 'Curated magazine delivering insights, trends and inspiration across technology, culture & lifestyle.',
-  clicks: '23K Clicks',
-}));
-
-function UpArrow(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
-    </svg>
-  );
-}
 
 function PeriodSelect() {
   return (
@@ -40,7 +12,9 @@ function PeriodSelect() {
   );
 }
 
-function MetricCard({ title, value, change, data, gradientId }) {
+// No time series or period-over-period delta exists on GET /earnings, so this
+// card shows the figure alone rather than an invented trend line and "+100%".
+function MetricCard({ title, value }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -49,33 +23,6 @@ function MetricCard({ title, value, change, data, gradientId }) {
       </div>
 
       <div className="text-3xl font-bold text-slate-900">{value}</div>
-      <div className="mt-1.5 flex items-center gap-1.5 text-xs">
-        <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600">
-          <UpArrow className="w-3 h-3" />
-          {change}
-        </span>
-        <span className="text-slate-400">vs last month</span>
-      </div>
-
-      <div className="h-16 mt-4 -mx-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="v"
-              stroke={CHART_COLORS.success}
-              strokeWidth={2}
-              fill={`url(#${gradientId})`}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }
@@ -83,7 +30,7 @@ function MetricCard({ title, value, change, data, gradientId }) {
 export default function InfluencerDashboard() {
   const [earnings, setEarnings] = useState(null);
   const [campCount, setCampCount] = useState(null);
-  const [mags, setMags] = useState(sponsoredMagazines);
+  const [mags, setMags] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -104,7 +51,7 @@ export default function InfluencerDashboard() {
           desc: m.shortDescription || m.description || '',
           clicks: `${(m.viewsCount ?? 0).toLocaleString('en-IN')} Clicks`,
         }));
-        if (alive && items.length) setMags(items);
+        if (alive) setMags(items);
       })
       .catch((err) => console.warn('magazines', err.message));
     return () => { alive = false; };
@@ -112,8 +59,8 @@ export default function InfluencerDashboard() {
 
   const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
   const liveStats = [
-    { id: 'links', value: campCount != null ? String(campCount) : promoStats[0].value, label: 'Live Links' },
-    { id: 'codes', value: campCount != null ? String(campCount).padStart(2, '0') : promoStats[1].value, label: 'Promo Code' },
+    { id: 'links', value: campCount != null ? String(campCount) : '0', label: 'Live Links' },
+    { id: 'codes', value: campCount != null ? String(campCount).padStart(2, '0') : '00', label: 'Promo Code' },
   ];
 
   return (
@@ -131,16 +78,10 @@ export default function InfluencerDashboard() {
         <MetricCard
           title="Earning"
           value={earnings ? inr(earnings.totalEarnings) : '₹ 0'}
-          change="100%"
-          data={earningTrend}
-          gradientId="earningGradient"
         />
         <MetricCard
           title="Payout"
           value={earnings ? inr(earnings.completedPayouts) : '₹ 0'}
-          change="100%"
-          data={payoutTrend}
-          gradientId="payoutGradient"
         />
 
         {/* Live Promo Code & Links */}
@@ -168,7 +109,7 @@ export default function InfluencerDashboard() {
       <section>
         <div className="mb-6">
           <h2 className="text-xl font-bold text-slate-900">Sponsored Magazine</h2>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Magazines you can promote and earn commission on</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -186,15 +127,12 @@ export default function InfluencerDashboard() {
                 </div>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{mag.desc}</p>
 
-                <div className="mt-auto pt-4 flex items-center gap-4">
-                  <Button text="View Details" />
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-slate-600 hover:text-slate-900"
-                  >
-                    Share Magazine
-                  </button>
-                </div>
+                {/* "View Details" and "Share Magazine" used to sit here with no
+                    handlers. Influencers have no magazine-detail route, and
+                    sharing is done per-campaign from the campaign page (that is
+                    where a promo code exists to attribute the click), so there
+                    is nothing for either control to do. Removed rather than
+                    left inert. */}
               </div>
             </article>
           ))}

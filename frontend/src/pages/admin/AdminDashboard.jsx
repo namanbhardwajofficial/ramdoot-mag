@@ -5,19 +5,8 @@ import { CHART_COLORS } from '@/config/theme';
 import { ORG } from '@/config/constants';
 import Button from "@/components/Button.jsx";
 import { adminApi, magazinesApi, listOf } from '@/lib/api';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Dummy data for the big campaign chart
-const campaignData = [
-  { name: 'Jan', a: 4000, b: 2400, c: 2400 },
-  { name: 'Feb', a: 3000, b: 1398, c: 2210 },
-  { name: 'Mar', a: 2000, b: 9800, c: 2290 },
-  { name: 'Apr', a: 2780, b: 3908, c: 2000 },
-  { name: 'May', a: 1890, b: 4800, c: 2181 },
-  { name: 'Jun', a: 2390, b: 3800, c: 2500 },
-  { name: 'Jul', a: 3490, b: 4300, c: 2100 },
-];
-
 export default function AdminDashboard() {
   const [counts, setCounts] = useState(null);
   const [magRows, setMagRows] = useState([]);
@@ -89,10 +78,6 @@ export default function AdminDashboard() {
     },
   ];
 
-  const dummyMagazines = [
-    { id: 1, name: 'Magazines', clicks: 1292129, conversions: 48991, revenue: 275197, published: '12/02/2024' },
-    { id: 2, name: 'Magazines', clicks: 1292129, conversions: 48991, revenue: 275197, published: '12/02/2024' },
-  ];
 
   return (
     <div className="p-1 overflow-scroll">
@@ -130,21 +115,11 @@ export default function AdminDashboard() {
              <Button text="Create Campaigns" variant="primary" />
           </div>
         </div>
-        <div className="h-75 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={campaignData}>
-              <defs>
-                <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/><stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/></linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-              <Tooltip />
-              <Area type="monotone" dataKey="a" stroke="#4F46E5" fillOpacity={1} fill="url(#colorA)" strokeWidth={2} />
-              <Area type="monotone" dataKey="b" stroke="#0EA5E9" fill="transparent" strokeWidth={2} />
-              <Area type="monotone" dataKey="c" stroke="#94A3B8" fill="transparent" strokeWidth={2} strokeDasharray="5 5" />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* No revenue time series exists yet: GET /admin/analytics/dashboard
+            returns only { total, thisMonth, pendingPayouts }. This used to draw
+            a hardcoded curve, which read as real reporting. */}
+        <div className="h-75 w-full flex items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400">
+          Campaign revenue over time isn&apos;t available yet.
         </div>
       </div>
 
@@ -201,9 +176,9 @@ export default function AdminDashboard() {
       <section className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-900">Magazines Publications</h2>
-            <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+            <p className="text-sm text-slate-500">Recently published magazines and how they are performing</p>
         </div>
-        <DataTable columns={magazineColumns} data={magRows.length ? magRows : dummyMagazines} />
+        <DataTable columns={magazineColumns} data={magRows} />
       </section>
 
       {/* 7. Recent Activity (audit logs) */}

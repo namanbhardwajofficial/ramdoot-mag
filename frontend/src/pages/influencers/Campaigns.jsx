@@ -28,23 +28,12 @@ function mapCampaignRow(c) {
   };
 }
 
-const campaigns = [
-  { id: 1, name: 'Campaign Name 1', startingDate: '22 Jan 2025', totalClicks: 2128, clickConversions: 200, conversions: '20%', commission: 12000 },
-  { id: 2, name: 'Campaign Name 2', startingDate: '20 Jan 2025', totalClicks: 382, clickConversions: 102, conversions: '10%', commission: 1400 },
-  { id: 3, name: 'Campaign Name 3', startingDate: '24 Jan 2025', totalClicks: 1021, clickConversions: 783, conversions: '12%', commission: 9280 },
-  { id: 4, name: 'Campaign Name 4', startingDate: '26 Jan 2025', totalClicks: 122, clickConversions: 19, conversions: '30%', commission: 1000 },
-  { id: 5, name: 'Campaign Name 4', startingDate: '26 Jan 2025', totalClicks: 122, clickConversions: 19, conversions: '30%', commission: 1000 },
-  { id: 6, name: 'Campaign Name 4', startingDate: '26 Jan 2025', totalClicks: 122, clickConversions: 19, conversions: '30%', commission: 1000 },
-  { id: 7, name: 'Campaign Name 4', startingDate: '26 Jan 2025', totalClicks: 122, clickConversions: 19, conversions: '30%', commission: 1000 },
-  { id: 8, name: 'Campaign Name 4', startingDate: '26 Jan 2025', totalClicks: 122, clickConversions: 19, conversions: '30%', commission: 1000 },
-];
-
 const TOTAL_PAGES = 10;
 
 export default function Campaigns() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [rows, setRows] = useState(campaigns);
+  const [rows, setRows] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -52,7 +41,7 @@ export default function Campaigns() {
       .list({ limit: 50 })
       .then((res) => {
         const items = listOf(res).map(mapCampaignRow);
-        if (alive && items.length) setRows(items);
+        if (alive) setRows(items);
       })
       .catch((err) => console.warn('campaigns', err.message));
     return () => {

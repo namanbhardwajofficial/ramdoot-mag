@@ -38,7 +38,7 @@ export default function MagazinesDetails({
                 {/* Left column: actions */}
                 <aside className="lg:col-span-3">
                     <h2 className="text-xl font-semibold mb-4">PDF Viewer</h2>
-                    <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
+                    <p className="text-sm text-slate-500 mb-4">Read this edition in your browser</p>
 
                     <div className="space-y-4">
                         <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -48,7 +48,7 @@ export default function MagazinesDetails({
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-medium">Download this edition</h3>
-                                    <p className="text-xs text-slate-400">List of all the magazines you been looking for</p>
+                                    <p className="text-xs text-slate-400">Save a copy to read offline</p>
                                     <button
                                         onClick={() => onDownload && onDownload()}
                                         className="mt-3 inline-flex items-center gap-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-full shadow-md hover:bg-slate-900 focus:outline-none"
@@ -67,7 +67,7 @@ export default function MagazinesDetails({
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-medium">Your view matters to us</h3>
-                                    <p className="text-xs text-slate-400">List of all the magazines you been looking for</p>
+                                    <p className="text-xs text-slate-400">Tell us what you thought of this edition</p>
                                     <button
                                         onClick={() => onWriteReview && onWriteReview()}
                                         className="mt-3 inline-flex items-center gap-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-full shadow-md hover:bg-slate-900 focus:outline-none"

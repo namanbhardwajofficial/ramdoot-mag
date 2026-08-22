@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import MagazineCollection, {
   ViewToggle,
 } from "@/components/user/MagazineCollection";
-import USER_MAGAZINES from "@/data/userMagazines";
 import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 
 /**
@@ -14,7 +13,7 @@ import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 export default function Magazines() {
   const navigate = useNavigate();
   const [view, setView] = useState("grid");
-  const [mags, setMags] = useState(USER_MAGAZINES);
+  const [mags, setMags] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -22,7 +21,7 @@ export default function Magazines() {
       .list({ status: "LIVE", limit: 24 })
       .then((res) => {
         const items = listOf(res).map(toMagazineCard);
-        if (alive && items.length) setMags(items);
+        if (alive) setMags(items);
       })
       .catch((err) => console.warn("magazines", err.message));
     return () => {
@@ -36,7 +35,7 @@ export default function Magazines() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Magazines</h1>
           <p className="mt-1 text-sm text-slate-500">
-            List of all the magazines you been looking for
+            Browse every edition available to you
           </p>
         </div>
         <ViewToggle view={view} onChange={setView} />

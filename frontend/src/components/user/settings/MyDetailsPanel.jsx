@@ -63,7 +63,7 @@ export default function MyDetailsPanel() {
     <div className="max-w-xl">
       <SectionHeader
         title="Personal Info"
-        subtitle="List of all the magazines you been looking for"
+        subtitle="Update your name, phone number and email address"
       />
 
       <div className="space-y-5">

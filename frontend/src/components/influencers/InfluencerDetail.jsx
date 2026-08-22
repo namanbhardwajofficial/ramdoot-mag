@@ -86,7 +86,7 @@ function CampaignsTab({ influencerId }) {
   return (
     <>
       <h2 className="text-lg font-semibold mb-1">Active Campaign</h2>
-      <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
+      <p className="text-sm text-slate-500 mb-4">Campaigns this influencer is currently running</p>
       <Toolbar statusFilter="" onStatusChange={() => {}} statusOptions={[]} search="" onSearchChange={() => {}} />
       <DataTable columns={columns} data={campaigns} loading={loading} />
     </>
@@ -192,12 +192,12 @@ function PaymentsTab() {
       </div>
 
       <h2 className="text-lg font-semibold mb-1">Payment History</h2>
-      <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
+      <p className="text-sm text-slate-500 mb-4">Payouts sent to this influencer</p>
       <DataTable columns={historyColumns} data={Array.isArray(data.history) ? data.history : []} />
 
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-1">Bank Information</h2>
-        <p className="text-sm text-slate-500 mb-3">List of all the magazines you been looking for</p>
+        <p className="text-sm text-slate-500 mb-3">The account their payouts are sent to</p>
         <div className="flex items-center justify-end mb-2">
           <button className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-full hover:bg-slate-800">
             Edit

@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 
 /**
  * Shared Settings layout: page header + a left sub-nav of tabs and the active
  * tab's panel on the right. Roles pass their own `tabs` so My details / Security
  * stay identical across admin and influencer while role-specific tabs (e.g.
  * influencer Payout) are added per role.
+ *
+ * The active tab is reflected in the URL (?tab=...) so individual tabs stay
+ * deep-linkable, matching the user-facing SettingsLayout.
  */
 export default function SettingsShell({
   tabs,
   subtitle = 'Manage your profile, security and account preferences',
 }) {
-  const [active, setActive] = useState(tabs[0].key);
-  const activeTab = tabs.find((t) => t.key === active) ?? tabs[0];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = tabs.find((t) => t.key === searchParams.get('tab')) ?? tabs[0];
+  const active = activeTab.key;
+  const setActive = (key) =>
+    setSearchParams((prev) => {
+      prev.set('tab', key);
+      return prev;
+    });
 
   return (
     <div className="p-1">

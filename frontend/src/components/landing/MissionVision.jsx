@@ -42,7 +42,10 @@ export default function MissionVision() {
                 magazines every month, subscription plans to get magazines every month.
               </p>
               <div className="mt-7">
-                <Button text={b.cta} handler={() => {}} />
+                <Button
+                  text={b.cta}
+                  handler={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+                />
               </div>
             </div>
           </div>

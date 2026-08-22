@@ -136,7 +136,7 @@ export default function Subscriptions() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Subscription List</h2>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Every plan your subscribers can buy</p>
         </div>
         <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(SUBSCRIPTION_STATUSES)} search={search} onSearchChange={setSearch} />
         <DataTable columns={columns} data={subscriptions} loading={loading} emptyMessage="No subscriptions found" />

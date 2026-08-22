@@ -1,7 +1,9 @@
 import heroBg from '@/assets/landing/hero-temple.webp';
 import Button from '@/components/Button';
+import useLandingNav from './useLandingNav';
 
 export default function Hero() {
+  const nav = useLandingNav();
   return (
     <section id="home" className="px-2 pt-2">
       <div className="relative overflow-hidden rounded-[20px] border border-[#e5e5e5]">
@@ -26,7 +28,7 @@ export default function Hero() {
               Choose your subscription plans to get magazines every month, subscription plans to get magazines every month.
             </p>
             <div className="mt-8">
-              <Button text="Get Started" handler={() => {}} />
+              <Button text="Get Started" handler={nav.signup} />
             </div>
           </div>
         </div>

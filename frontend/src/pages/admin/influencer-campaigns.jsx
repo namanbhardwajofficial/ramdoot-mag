@@ -131,7 +131,7 @@ export default function InfluencerCampaigns() {
       <>
         <header className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Campaign List</h1>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Every campaign running across your influencers</p>
         </header>
 
         <Toolbar
@@ -158,7 +158,7 @@ export default function InfluencerCampaigns() {
     <>
       <header className="mb-6">
         <h1 className="text-2xl font-bold mb-1">Influencers List</h1>
-        <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+        <p className="text-sm text-slate-500">Everyone promoting Ramdoot magazines</p>
       </header>
 
       <Toolbar

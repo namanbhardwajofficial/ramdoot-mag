@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
-import dummyMagazines from "@/data/dummyMagazines.js";
 import RequireAuth from "@/components/RequireAuth.jsx";
 import { magazinesApi, toMagazineCard } from "@/lib/api";
 
@@ -82,8 +81,10 @@ const router = createBrowserRouter([
             const items = Array.isArray(page?.data) ? page.data : [];
             return items.map(toMagazineCard);
           } catch (err) {
-            console.warn("Magazines API unavailable, using sample data:", err.message);
-            return dummyMagazines;
+            // Render an empty catalogue rather than sample data — showing
+            // magazines that do not exist is worse than showing none.
+            console.warn("Magazines API unavailable:", err.message);
+            return [];
           }
         },
       },

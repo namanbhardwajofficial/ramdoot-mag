@@ -11,7 +11,7 @@ export default function Magazines({ handleBuy, loading, message }) {
         <div>
           <h1 className="text-2xl font-bold mb-1">Magazines</h1>
           <p className="text-sm text-slate-500">
-            List of all the magazines you been looking for
+            Every magazine in the catalogue
           </p>
         </div>
 

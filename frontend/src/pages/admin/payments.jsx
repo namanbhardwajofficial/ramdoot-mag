@@ -76,7 +76,7 @@ export default function Payments() {
     return (
       <>
         <h1 className="text-2xl font-bold mb-1">Payment List</h1>
-        <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
+        <p className="text-sm text-slate-500 mb-4">Every payment received from subscribers</p>
         <Toolbar statusFilter={payStatusFilter} onStatusChange={setPayStatusFilter} statusOptions={Object.values(PAYMENT_STATUSES)} search={paySearch} onSearchChange={setPaySearch} onExport={() => {}} />
         <DataTable columns={paymentCols} data={payments} loading={loading} />
         <PaymentDetailsDrawer open={drawerType === 'details'} payment={selectedPayment} onClose={closeAll} onInitiateRefund={() => handleRefund(selectedPayment.id)} onViewStatus={() => setDrawerType('refund-steps')} />
@@ -90,7 +90,7 @@ export default function Payments() {
     return (
       <>
         <h1 className="text-2xl font-bold mb-1">Influencer Payout</h1>
-        <p className="text-sm text-slate-500 mb-4">List of all the magazines you been looking for</p>
+        <p className="text-sm text-slate-500 mb-4">Commission paid out to influencers</p>
         <Toolbar statusFilter={payoutStatusFilter} onStatusChange={setPayoutStatusFilter} statusOptions={Object.values(PAYOUT_STATUSES)} search={payoutSearch} onSearchChange={setPayoutSearch} onExport={() => {}} />
         <DataTable columns={payoutCols} data={payouts} loading={loading} />
         <InfluencerPayoutDrawer open={drawerType === 'payout'} payout={selectedPayout} onClose={closeAll} />
@@ -124,7 +124,7 @@ export default function Payments() {
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Payment List</h2>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Every payment received from subscribers</p>
         </div>
         <Toolbar statusFilter={payStatusFilter} onStatusChange={setPayStatusFilter} statusOptions={Object.values(PAYMENT_STATUSES)} search={paySearch} onSearchChange={setPaySearch} />
         <DataTable columns={paymentCols} data={payments.slice(0, 5)} loading={loading} />
@@ -140,7 +140,7 @@ export default function Payments() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Influencer Payout</h2>
-          <p className="text-sm text-slate-500">List of all the magazines you been looking for</p>
+          <p className="text-sm text-slate-500">Commission paid out to influencers</p>
         </div>
         <Toolbar statusFilter={payoutStatusFilter} onStatusChange={setPayoutStatusFilter} statusOptions={Object.values(PAYOUT_STATUSES)} search={payoutSearch} onSearchChange={setPayoutSearch} />
         <DataTable columns={payoutCols} data={payouts.slice(0, 5)} loading={loading} />

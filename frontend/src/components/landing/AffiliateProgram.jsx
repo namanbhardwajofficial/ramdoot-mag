@@ -1,7 +1,9 @@
 import Button from '@/components/Button';
+import useLandingNav from './useLandingNav';
 import TwoColSection from '@/components/landing/TwoColSection';
 
 export default function AffiliateProgram() {
+  const nav = useLandingNav();
   return (
     <TwoColSection id="affiliate" title="Affiliate Program">
       <h3 className="max-w-[598px] font-['Delight'] font-medium leading-[1.15] tracking-[-0.01em] text-[#1c1c1e] text-2xl sm:text-3xl md:text-[2.25rem] md:leading-[44px]">
@@ -13,7 +15,7 @@ export default function AffiliateProgram() {
         month, subscription plans to get magazines every month.
       </p>
       <div className="mt-7">
-        <Button text="Become an Affiliate" handler={() => {}} />
+        <Button text="Become an Affiliate" handler={nav.signup} />
       </div>
     </TwoColSection>
   );

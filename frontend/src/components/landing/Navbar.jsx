@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Logo from '@/components/Logo';
 import Button from '@/components/Button';
+import useLandingNav from './useLandingNav';
 
 const NAV_LINKS = [
   { label: 'Home', href: '#home' },
@@ -11,6 +12,7 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
+  const nav = useLandingNav();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -50,7 +52,7 @@ export default function Navbar() {
         {/* CTA + mobile toggle */}
         <div className="flex items-center gap-3">
           <div className="hidden md:block">
-            <Button text="Login" handler={() => {}} />
+            <Button text="Login" handler={nav.login} />
           </div>
           <button
             onClick={() => setOpen((v) => !v)}
@@ -85,7 +87,14 @@ export default function Navbar() {
               </li>
             ))}
             <li className="mt-2">
-              <Button text="Login" handler={() => setOpen(false)} width="100%" />
+              <Button
+                text="Login"
+                handler={() => {
+                  setOpen(false);
+                  nav.login();
+                }}
+                width="100%"
+              />
             </li>
           </ul>
         </div>

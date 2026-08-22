@@ -252,7 +252,7 @@ export default function Publications() {
           <div>
             <h1 className="text-2xl font-bold mb-1">Magazines List</h1>
             <p className="text-sm text-slate-500">
-              List of all the magazines you been looking for
+              Everything published, scheduled or in draft
             </p>
           </div>
         </header>
@@ -357,7 +357,7 @@ export default function Publications() {
           <div>
             <h2 className="text-lg font-semibold">Magazines List</h2>
             <p className="text-sm text-slate-500">
-              List of all the magazines you been looking for
+              Everything published, scheduled or in draft
             </p>
           </div>
         </div>
