@@ -30,6 +30,29 @@ function mapUser(u) {
   };
 }
 
+// GET /users only returns `_count` aggregates, so the list row has nothing
+// behind the detail view's billing fields. GET /users/:id returns the actual
+// related rows (userSubscriptions with a nested plan, payments, campaigns) —
+// this folds those into the same row shape the detail view already renders.
+// Note: the nested plan has no `magazines`, so the Magazines tab stays empty
+// until the backend includes them (or we fetch plans separately).
+function mapUserDetail(u) {
+  const subs = u.userSubscriptions || [];
+  const active = subs.find((s) => String(s.status).toUpperCase() === 'ACTIVE') || subs[0];
+  const latestPayment = (u.payments || [])[0];
+  const spent = Number(u.totalSpent ?? 0);
+  return {
+    ...mapUser(u),
+    subscription: active ? 'Subscribed' : 'None',
+    subscriptionPlan: active?.plan?.name || '',
+    amount: active?.plan?.price != null ? `₹${Number(active.plan.price).toLocaleString('en-IN')}` : '—',
+    paymentMethod: latestPayment?.paymentMethod || '—',
+    totalSpent: spent,
+    lastLogin: u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—',
+    twoFA: u.isTwoFactorEnabled ? { status: 'Enabled' } : undefined,
+  };
+}
+
 function computeStats(list) {
   const by = (s) => list.filter((u) => u.status === s).length;
   return {
@@ -64,6 +87,17 @@ export default function useUsers() {
       setUsers(listOf(res).map(mapUser));
     } catch (err) {
       console.error('fetchUsers', err);
+    }
+  }, []);
+
+  // Full record for one user, for the detail view. Returns null on failure so
+  // the caller can fall back to the list row rather than showing nothing.
+  const fetchUser = useCallback(async (id) => {
+    try {
+      return mapUserDetail(await usersApi.get(id));
+    } catch (err) {
+      console.warn('fetchUser', err.message);
+      return null;
     }
   }, []);
 
@@ -129,6 +163,7 @@ export default function useUsers() {
     init,
     fetchAll,
     fetchStats,
+    fetchUser,
     createUser,
     deactivateUser,
     updateUser,

@@ -419,6 +419,76 @@ service would fix it. ~3 lines.
 
 ---
 
+## 11. 🟠 Deployed `CORS_ORIGINS` excludes localhost — blocks all local dev
+
+Verified against `http://13.204.191.64:3000` on 2026-08-22. A preflight from any
+localhost origin comes back **204 with no `Access-Control-Allow-Origin` header**:
+
+```
+$ curl -i -X OPTIONS http://13.204.191.64:3000/api/v1/auth/login \
+    -H 'Origin: http://localhost:3001' \
+    -H 'Access-Control-Request-Method: POST'
+HTTP/1.1 204 No Content
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+Access-Control-Allow-Headers: Content-Type,Authorization,X-Requested-With
+          <- no Access-Control-Allow-Origin
+```
+
+Tested `localhost:3001`, `:5173`, `:3000` and `:4173` — all rejected. `main.ts` reads
+`CORS_ORIGINS` (falling back to `http://localhost:3001`), so the EC2 environment must
+be setting it to production-only origins. The browser therefore blocks every call,
+even though the API itself answers fine over curl.
+
+**Not blocking us any more** — we now route dev traffic through a Vite proxy, so the
+browser makes a same-origin request to `localhost:3001` and Vite forwards it
+server-side where CORS does not apply. No backend change is strictly required.
+
+Still worth adding `http://localhost:3001` to `CORS_ORIGINS` on the EC2 instance: any
+other client (a second frontend, Swagger-from-browser, a mobile web build, anyone
+debugging against the deployed API) hits the same wall with a confusing error.
+
+---
+
+## 12. 🔴 No resend-OTP endpoint, and an abandoned signup locks the email forever
+
+`POST /auth/signup/step1` creates the user row and emails an OTP. If the user never
+completes `step2` — closes the tab, OTP expires, email never arrives — that email
+address becomes **permanently unusable**:
+
+```
+$ curl -X POST .../auth/signup/step1 -d '{"email":"pending@example.com", ...}'
+{"success":false,"message":"Email is already registered","error":{"code":"Conflict"}}  # 409
+```
+
+They cannot retry signup (409), and cannot log in either — `step2` is what sets the
+password, so the account has no credentials. There is no route out of this state from
+the UI. Anyone whose OTP email lands in spam is simply stuck.
+
+There is also no resend endpoint anywhere in the spec — I checked every path for
+`resend`/`otp`; only `/auth/verify-email` exists, and that needs an OTP the user never
+got. So the **"Resend Verification Code" control on our signup screen has nothing to
+call** and is currently inert.
+
+Two things needed:
+
+1. `POST /auth/signup/resend-otp` — body `{ email }`; regenerates and re-sends the OTP
+   for a user who exists but is not yet verified. Rate-limit it (e.g. 1/60s).
+   Response `{ message, email }`, matching `step1`.
+2. Make `step1` idempotent for an **unverified** user: instead of 409, refresh the
+   pending record and re-send the OTP. Keep the 409 only when
+   `is_email_verified = true`. That alone fixes the lockout.
+
+Once (1) exists I'll wire the resend button; right now I've left it inert rather than
+pointing it at `step1`, which would just surface "Email is already registered".
+
+**Also confirmed:** `step1` does not return the OTP in the deployed environment (it
+does locally). That's correct for production — just noting that signup there depends
+entirely on the outbound email actually being delivered, which we can't verify from
+the frontend.
+
+---
 ## Suggested order
 
 | # | Item | Why this position |

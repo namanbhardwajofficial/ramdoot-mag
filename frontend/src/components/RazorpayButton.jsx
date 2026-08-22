@@ -59,9 +59,12 @@ export function useRazorpay() {
         name: ORG.name,
         description,
         order_id: order.orderId,
-        handler: () => {
+        // Razorpay hands back { razorpay_payment_id, razorpay_order_id,
+        // razorpay_signature }. Pass it on — callers need the payment id to
+        // find the payment row this order created.
+        handler: (response) => {
           toastSuccess("Payment received — we'll confirm it shortly.");
-          onSuccess?.(order);
+          onSuccess?.(order, response);
         },
         prefill: {
           name: user?.fullName || "",

@@ -12,7 +12,6 @@ import Landing from "./pages/Landing.jsx";
 // 404 + error boundary stay eager so they always render (even if a chunk fails).
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
-import { User } from "lucide-react";
 
 // Everything else is lazy-loaded so it stays out of the homepage's critical bundle.
 const Login = lazy(() => import("./pages/Login.jsx"));
@@ -20,14 +19,18 @@ const Signup = lazy(() => import("./pages/Signup.jsx"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
 const Users = lazy(() => import("./pages/admin/users.jsx"));
 //User_Mangement page import Start here
-const UserDahboard =lazy(()=>import("./pages/user/UserDashboard.jsx"));
+// The reader-facing home: hero + live magazine collection. (It previously
+// pointed at UserDashboard.jsx, an admin-console scaffold with hardcoded user
+// counts — wrong audience and wrong data.)
+const UserHome = lazy(() => import("./pages/user/Home.jsx"));
 // UserLayout is declared once further down (both branches added it in the merge).
-const UserManagment =lazy(()=> import("./pages/user/Users.jsx"));
-const UserSubcription =lazy(()=> import("./pages/user/Subscription.jsx"));
-const InfluencerCampaignsUser =lazy(()=> import("./pages/user/InfluencersCampaigns.jsx"));
-const PublicationsUser =lazy(()=> import("./pages/user/Publications.jsx"));
-const UserPayment =lazy(()=> import("./pages/user/payments.jsx"));
-const UserSecurity =lazy(()=> import("./pages/user/Security.jsx"));
+// NOTE: there is deliberately no user-facing "users" page. GET /users is
+// ADMIN-only (403 for USER), so a user-management console cannot exist behind
+// RequireAuth role="USER". Admin user management lives at /admin/users.
+// Subscriptions.jsx (plural) is the real plans page: it loads plans from the
+// API and runs Razorpay checkout. Subscription.jsx (singular) is an unrouted
+// mock-data scaffold — do not point this back at it.
+const UserSubcription =lazy(()=> import("./pages/user/Subscriptions.jsx"));
 //user_Mangement page import end here
 const Magazines = lazy(() => import("@/pages/admin/magazines.jsx"));
 const Subscriptions = lazy(() => import("@/pages/admin/subscriptions.jsx"));
@@ -43,7 +46,7 @@ const RequestPayout = lazy(() => import("./pages/influencers/RequestPayout.jsx")
 const RequestedPayout = lazy(() => import("./pages/influencers/RequestedPayout.jsx"));
 const InfluencerSettings = lazy(() => import("./pages/influencers/Settings.jsx"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings.jsx"));
-const AdminLayout = lazy(() => import("./layouts/adminLayout.jsx"));
+const AdminLayout = lazy(() => import("./layouts/AdminLayout.jsx"));
 const InfluencerLayout = lazy(() => import("./layouts/InfluencerLayout.jsx"));
 const UserLayout = lazy(() => import("./layouts/UserLayout.jsx"));
 const UserMagazines = lazy(() => import("./pages/user/Magazines.jsx"));
@@ -129,12 +132,7 @@ const router = createBrowserRouter([
     // Both child sets now live here so /user stays behind RequireAuth.
     children: [
       { index: true, element: <Navigate to="home" replace /> },
-      { path: "home", element: withSuspense(<UserDahboard />) },
-      { path: "users", element: withSuspense(<UserManagment />) },
-      { path: "influencer-campaigns", element: withSuspense(<InfluencerCampaignsUser />) },
-      { path: "publications", element: withSuspense(<PublicationsUser />) },
-      { path: "payments", element: withSuspense(<UserPayment />) },
-      { path: "security", element: withSuspense(<UserSecurity />) },
+      { path: "home", element: withSuspense(<UserHome />) },
       { path: "magazines", element: withSuspense(<UserMagazines />) },
       { path: "magazines/:id", element: withSuspense(<UserMagazineDetail />) },
       { path: "subscriptions", element: withSuspense(<UserSubcription />) },

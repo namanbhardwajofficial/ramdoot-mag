@@ -1,5 +1,15 @@
+// Absolute, publicly reachable backend origin. Use this only for links that
+// leave the app (e.g. the promo link an influencer copies and shares) — those
+// must resolve from anywhere, not just from a browser on the dev server.
 export const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+
+// Origin the app itself fetches from. In dev this is empty so requests go out
+// as same-origin relative paths (/api/v1/...) and Vite proxies them to
+// BACKEND_URL server-side — the deployed backend's CORS allowlist has no
+// localhost entry, so a direct call from the browser would be blocked.
+// See the `proxy` block in vite.config.js.
+export const API_ORIGIN = import.meta.env.DEV ? '' : BACKEND_URL;
 
 export const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID;
 

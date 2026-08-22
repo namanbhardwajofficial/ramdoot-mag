@@ -1,124 +1,143 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/Button.jsx";
 import { ORG } from "@/config/constants";
 import { CheckCircleIcon } from "@/components/ui/icons";
 import { toastSuccess, toastError } from "@/lib/confirm";
 import { subscriptionsApi, paymentsApi, listOf } from "@/lib/api";
+import { useRazorpay } from "@/components/RazorpayButton";
 
 /**
- * Subscription plans page — a hero panel with the featured plan card floating
- * over its right edge. See design/User - subscriptions.png.
- */
-const PLAN = {
-  id: null,
-  badge: "Most Popular",
-  name: "Senior plan",
-  price: 45,
-  cadence: "per month",
-  tagline: "Our most popular plan.",
-  features: [
-    "Access to basic features",
-    "Access to basic features",
-    "Access to basic features",
-    "Access to basic features",
-  ],
-};
-
-// Random-ish provider ref for the dev payment record.
-const ref = () => Math.random().toString(36).slice(2, 12);
-
-/**
- * Record a payment and return its id.
+ * Subscription plans page — hero panel above a grid of the real plans returned
+ * by GET /subscription-plans, each with a Razorpay checkout.
  *
- * NOTE: no Razorpay order endpoint / checkout SDK exists yet, so this creates a
- * dev payment record straight away (the backend marks `POST /payments` as
- * SUCCESS). When the real gateway lands, replace ONLY this function with a
- * Razorpay checkout that resolves to the verified payment id.
+ * Payment flow, and why it takes two steps:
+ *   1. `pay()` opens a Razorpay order. The backend writes a PENDING payment row
+ *      whose `paymentProviderId` is the ORDER id, but it does not return that
+ *      row's id — only `{ orderId, amount, currency, keyId }`.
+ *   2. `POST /subscriptions/purchase` needs that row's id, so after checkout we
+ *      look the row up in `paymentsApi.mine()`.
+ *
+ * The lookup matches on the order id OR the Razorpay payment id because the
+ * `payment.captured` webhook REWRITES `paymentProviderId` from the former to
+ * the latter. Whether the webhook has landed yet is a race, so we accept both
+ * and the result is deterministic either way.
+ *
+ * The webhook only flips the payment to SUCCESS — it never creates the
+ * subscription — so this call is required to actually grant access.
  */
-async function initiatePayment(plan) {
-  const payment = await paymentsApi.record({
-    razorpayOrderId: `order_dev_${ref()}`,
-    razorpayPaymentId: `pay_dev_${ref()}`,
-    amount: Math.round(Number(plan.price) * 100), // backend expects paise
-    relatedType: "subscription",
-    relatedId: plan.id,
-    description: `Subscription: ${plan.name}`,
-  });
-  return payment.id;
+
+function cadenceLabel(billingCycle) {
+  const c = String(billingCycle || "").toUpperCase();
+  if (c === "MONTHLY") return "per month";
+  if (c === "QUARTERLY") return "per quarter";
+  if (c === "YEARLY") return "per year";
+  return "";
+}
+
+// Included magazines double as the plan's feature list.
+function featuresOf(plan) {
+  const titles = (plan.magazines || [])
+    .map((m) => m.magazine?.title)
+    .filter(Boolean);
+  return titles.length ? titles : ["Access to all published magazines"];
 }
 
 export default function Subscriptions() {
-  const [plan, setPlan] = useState(PLAN);
-  const [mySub, setMySub] = useState(null);
-  const [purchasing, setPurchasing] = useState(false);
+  const [plans, setPlans] = useState([]);
+  const [mySubs, setMySubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pendingPlanId, setPendingPlanId] = useState(null);
+  const { pay } = useRazorpay();
+
+  const loadMine = useCallback(
+    () =>
+      subscriptionsApi
+        .mine()
+        .then((res) => setMySubs(listOf(res)))
+        .catch((err) => console.warn("mine", err.message)),
+    [],
+  );
 
   useEffect(() => {
     let alive = true;
-
-    subscriptionsApi
-      .plans()
-      .then((res) => {
-        const plans = listOf(res);
-        if (!alive || !plans.length) return;
-        const p = plans[0];
-        setPlan({
-          ...PLAN,
-          id: p.id,
-          name: p.name,
-          price: Number(p.price ?? PLAN.price),
-          cadence: p.billingCycle
-            ? `per ${String(p.billingCycle).toLowerCase().replace("ly", "")}`
-            : PLAN.cadence,
-          tagline: p.description || PLAN.tagline,
-        });
-      })
-      .catch((err) => console.warn("plans", err.message));
-
-    // Detect an existing active subscription so the card reflects owned state.
-    subscriptionsApi
-      .mine()
-      .then((res) => {
-        if (!alive) return;
-        const active = listOf(res).find(
-          (s) => String(s.status || "").toUpperCase() === "ACTIVE",
-        );
-        if (active) setMySub(active);
-      })
-      .catch((err) => console.warn("mine", err.message));
-
+    Promise.all([
+      subscriptionsApi
+        .plans()
+        .then((res) => {
+          if (alive) setPlans(listOf(res));
+        })
+        .catch((err) => {
+          console.warn("plans", err.message);
+          if (alive) toastError("Could not load subscription plans");
+        }),
+      loadMine(),
+    ]).finally(() => {
+      if (alive) setLoading(false);
+    });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadMine]);
 
-  const owned =
-    mySub &&
-    String(mySub.status || "").toUpperCase() === "ACTIVE" &&
-    (!plan.id || mySub.planId === plan.id);
+  const activePlanIds = new Set(
+    mySubs
+      .filter((s) => String(s.status || "").toUpperCase() === "ACTIVE")
+      .map((s) => s.planId),
+  );
 
-  async function handleGetPlan() {
-    if (!plan.id) {
-      toastError("Plan is not available yet. Please try again in a moment.");
-      return;
-    }
-    setPurchasing(true);
-    try {
-      const paymentId = await initiatePayment(plan);
-      const sub = await subscriptionsApi.purchase({ planId: plan.id, paymentId });
-      setMySub(sub);
-      toastSuccess("Subscription activated");
-    } catch (err) {
-      toastError(err.message || "Purchase failed");
-    } finally {
-      setPurchasing(false);
-    }
+  // Resolve the payment row created by this order — see the note above on why
+  // either id can be the one stored.
+  async function findPaymentId(orderId, razorpayPaymentId) {
+    const rows = listOf(await paymentsApi.mine());
+    const match = rows.find(
+      (p) =>
+        p.paymentProviderId === orderId ||
+        (razorpayPaymentId && p.paymentProviderId === razorpayPaymentId),
+    );
+    return match?.id || null;
+  }
+
+  async function handleGetPlan(plan) {
+    setPendingPlanId(plan.id);
+    await pay({
+      amount: Number(plan.price), // rupees; the backend converts to paise
+      relatedType: "subscription",
+      relatedId: plan.id,
+      description: `Subscription: ${plan.name}`,
+      onSuccess: async (order, response) => {
+        try {
+          const paymentId = await findPaymentId(
+            order.orderId,
+            response?.razorpay_payment_id,
+          );
+          if (!paymentId) {
+            toastError(
+              "Payment went through but we could not link it to your account. Please contact support.",
+            );
+            return;
+          }
+          await subscriptionsApi.purchase({ planId: plan.id, paymentId });
+          await loadMine();
+          toastSuccess("Subscription activated");
+        } catch (err) {
+          toastError(err.message || "Could not activate your subscription");
+        } finally {
+          setPendingPlanId(null);
+        }
+      },
+    });
+    // pay() resolves once the widget is open (or failed to open); clear the
+    // spinner unless onSuccess is still finishing the purchase.
+    setPendingPlanId((id) => (id === plan.id ? null : id));
+  }
+
+  if (loading) {
+    return <div className="p-6 text-sm text-slate-400">Loading plans…</div>;
   }
 
   return (
-    <section className="relative">
-      {/* Hero panel — kept tall on desktop so the floating card sits centered
-          over its right edge without overflowing up into the top bar. */}
-      <div className="flex min-h-65 flex-col justify-center rounded-2xl bg-linear-to-br from-slate-100 to-slate-50 px-6 py-12 md:px-12 lg:min-h-110 lg:pr-104">
+    <section>
+      <div className="flex min-h-40 flex-col justify-center rounded-2xl bg-linear-to-br from-slate-100 to-slate-50 px-6 py-10 md:px-12">
         <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">
           Subscription Plans
         </h1>
@@ -127,71 +146,81 @@ export default function Subscriptions() {
         </p>
       </div>
 
-      {/* Featured plan card */}
-      <div className="mt-6 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:absolute lg:right-8 lg:top-1/2 lg:mt-0 lg:w-80 lg:-translate-y-1/2">
-        <div className="bg-btn-primary py-2.5 text-center text-sm font-medium text-white">
-          {plan.badge}
-        </div>
-
-        <div className="p-6">
-          <p className="text-sm font-medium text-slate-700">{plan.name}</p>
-
-          <div className="mt-2 flex items-start gap-1">
-            <span className="mt-1 text-2xl font-bold text-slate-900">
-              {ORG.currencySymbol}
-            </span>
-            <span className="text-5xl font-bold leading-none text-slate-900">
-              {plan.price}
-            </span>
-            <span className="mt-auto mb-1 text-sm text-slate-500">
-              {plan.cadence}
-            </span>
-          </div>
-
-          <p className="mt-2 text-sm text-slate-500">{plan.tagline}</p>
-
-          <div className="mt-5">
-            {owned ? (
-              <Button text="Current plan" width="100%" disabled />
-            ) : (
-              <Button
-                text="Get this plan"
-                width="100%"
-                handler={handleGetPlan}
-                loading={purchasing}
-              />
-            )}
-            {owned && mySub?.endDate && (
-              <p className="mt-2 text-center text-xs text-slate-500">
-                Active until {new Date(mySub.endDate).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-
-          <div className="mt-6 border-t border-slate-100 pt-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Features
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              Everything in our{" "}
-              <span className="font-semibold text-slate-900">free plan</span>{" "}
-              plus…
-            </p>
-
-            <ul className="mt-4 space-y-3">
-              {plan.features.map((feature, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-3 text-sm text-slate-600"
+      {plans.length === 0 ? (
+        <p className="mt-8 text-center text-sm text-slate-400">
+          No subscription plans are available right now.
+        </p>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {plans.map((plan, i) => {
+            const owned = activePlanIds.has(plan.id);
+            return (
+              <div
+                key={plan.id}
+                className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+              >
+                <div
+                  className={`py-2.5 text-center text-sm font-medium ${
+                    i === 0
+                      ? "bg-btn-primary text-white"
+                      : "bg-slate-50 text-slate-500"
+                  }`}
                 >
-                  <CheckCircleIcon className="h-5 w-5 shrink-0 text-slate-400" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  {i === 0 ? "Most Popular" : cadenceLabel(plan.billingCycle) || "Plan"}
+                </div>
+
+                <div className="flex flex-1 flex-col p-6">
+                  <p className="text-sm font-medium text-slate-700">{plan.name}</p>
+
+                  <div className="mt-2 flex items-start gap-1">
+                    <span className="mt-1 text-2xl font-bold text-slate-900">
+                      {ORG.currencySymbol}
+                    </span>
+                    <span className="text-5xl font-bold leading-none text-slate-900">
+                      {Number(plan.price).toLocaleString("en-IN")}
+                    </span>
+                    <span className="mt-auto mb-1 text-sm text-slate-500">
+                      {cadenceLabel(plan.billingCycle)}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm text-slate-500">{plan.description}</p>
+
+                  <div className="mt-5">
+                    {owned ? (
+                      <Button text="Current plan" width="100%" disabled />
+                    ) : (
+                      <Button
+                        text="Get this plan"
+                        width="100%"
+                        handler={() => handleGetPlan(plan)}
+                        loading={pendingPlanId === plan.id}
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-6 border-t border-slate-100 pt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Included magazines
+                    </p>
+                    <ul className="mt-4 space-y-3">
+                      {featuresOf(plan).map((feature, k) => (
+                        <li
+                          key={k}
+                          className="flex items-center gap-3 text-sm text-slate-600"
+                        >
+                          <CheckCircleIcon className="h-5 w-5 shrink-0 text-slate-400" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </section>
   );
 }

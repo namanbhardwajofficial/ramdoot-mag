@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import Button from '@/components/Button.jsx';
 import PayoutRequestedDrawer from '@/components/influencers/PayoutRequestedDrawer';
-import { earningsApi, getStoredUser } from '@/lib/api';
+import { earningsApi, getStoredUser, listOf } from '@/lib/api';
 import { toastError } from '@/lib/confirm';
 
 const trend = [10, 14, 12, 20, 17, 25, 22, 30, 27, 36].map((v) => ({ v }));
+
+// Sentinel for the "add a new bank account" option in the account picker.
+const NEW_ACCOUNT = '__new__';
 
 const inputCls =
   'w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300';
@@ -100,6 +103,9 @@ export default function RequestPayout() {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState({ commission: 0, available: 0 });
+  // Saved payout accounts. `NEW_ACCOUNT` means "enter fresh bank details".
+  const [accounts, setAccounts] = useState([]);
+  const [accountId, setAccountId] = useState(NEW_ACCOUNT);
   const [form, setForm] = useState({
     fullName: '',
     phone: '',
@@ -140,32 +146,55 @@ export default function RequestPayout() {
         );
       })
       .catch((err) => console.warn('earnings', err.message));
+
+    // Reuse an already-saved payout account instead of creating a duplicate on
+    // every request. The API masks the account number, so we match by id only.
+    earningsApi
+      .bankAccounts()
+      .then((res) => {
+        const list = listOf(res);
+        setAccounts(list);
+        const preferred = list.find((a) => a.isDefault) || list[0];
+        if (preferred) setAccountId(preferred.id);
+      })
+      .catch((err) => console.warn('bankAccounts', err.message));
   }, []);
 
   async function handleRequest() {
-    if (form.accountNumber !== form.confirmAccountNumber) {
-      toastError('Account numbers do not match');
-      return;
-    }
     const amount = Number(form.withdrawAmount);
     if (!amount || amount <= 0) {
       toastError('Enter a valid withdrawal amount');
       return;
     }
-    if (!form.accountHolder || !form.bankName || !form.accountNumber || !form.ifsc) {
-      toastError('Please fill in all bank details');
-      return;
+
+    const creatingAccount = accountId === NEW_ACCOUNT;
+    if (creatingAccount) {
+      if (form.accountNumber !== form.confirmAccountNumber) {
+        toastError('Account numbers do not match');
+        return;
+      }
+      if (!form.accountHolder || !form.bankName || !form.accountNumber || !form.ifsc) {
+        toastError('Please fill in all bank details');
+        return;
+      }
     }
+
     setSubmitting(true);
     try {
-      const account = await earningsApi.addBankAccount({
-        holderName: form.accountHolder,
-        bankName: form.bankName,
-        accountNumber: form.accountNumber,
-        ifscCode: form.ifsc,
-        isDefault: true,
-      });
-      await earningsApi.withdraw({ amount, bankAccountId: account.id });
+      // Only add a bank account when the user asked for a new one — otherwise
+      // every payout request would save another copy of the same account.
+      const bankAccountId = creatingAccount
+        ? (
+            await earningsApi.addBankAccount({
+              holderName: form.accountHolder,
+              bankName: form.bankName,
+              accountNumber: form.accountNumber,
+              ifscCode: form.ifsc,
+              isDefault: accounts.length === 0,
+            })
+          ).id
+        : accountId;
+      await earningsApi.withdraw({ amount, bankAccountId });
       setSuccess(true);
     } catch (err) {
       toastError(err.message || 'Payout request failed');
@@ -244,9 +273,29 @@ export default function RequestPayout() {
             </div>
           ) : (
             <div className="space-y-5">
-              <Field label="Account Holder Name" required hint="As per bank records">
-                <input className={inputCls} value={form.accountHolder} onChange={set('accountHolder')} />
-              </Field>
+              {accounts.length > 0 && (
+                <Field label="Payout Account" required hint="Where the money will be sent">
+                  <select
+                    className={inputCls}
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                  >
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {[a.bankName, a.holderName, a.ifscCode].filter(Boolean).join(' · ')}
+                        {a.isDefault ? ' (default)' : ''}
+                      </option>
+                    ))}
+                    <option value={NEW_ACCOUNT}>Use a different bank account…</option>
+                  </select>
+                </Field>
+              )}
+
+              {accountId === NEW_ACCOUNT && (
+                <Field label="Account Holder Name" required hint="As per bank records">
+                  <input className={inputCls} value={form.accountHolder} onChange={set('accountHolder')} />
+                </Field>
+              )}
 
               <Field label="Withdraw Amount" required>
                 <div className="relative">
@@ -255,7 +304,11 @@ export default function RequestPayout() {
                 </div>
               </Field>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div
+                className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${
+                  accountId === NEW_ACCOUNT ? '' : 'hidden'
+                }`}
+              >
                 <Field label="Account Type" required>
                   <select className={inputCls} value={form.accountType} onChange={set('accountType')}>
                     <option>Savings</option>

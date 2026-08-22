@@ -8,9 +8,9 @@
 // All successful responses are wrapped as `{ success, message, data }` and
 // errors as `{ success: false, message, error: { code, details? } }`.
 // ==========================================
-import { BACKEND_URL } from '@/config/constants';
+import { API_ORIGIN, BACKEND_URL } from '@/config/constants';
 
-export const API_BASE = `${BACKEND_URL}/api/v1`;
+export const API_BASE = `${API_ORIGIN}/api/v1`;
 
 // Public promo-tracking link an influencer shares. Hitting it records a click
 // (GET /track/:promoCode) — optional `medium` tags where it was shared.
@@ -189,7 +189,7 @@ export function toMagazineCard(m) {
   const cover = m.coverImageUrl
     ? m.coverImageUrl.startsWith('http')
       ? m.coverImageUrl
-      : `${BACKEND_URL}${m.coverImageUrl}`
+      : `${API_ORIGIN}${m.coverImageUrl}`
     : MAGAZINE_PLACEHOLDER;
   return {
     id: m.id,

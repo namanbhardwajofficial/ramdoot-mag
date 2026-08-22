@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import Button from "@/components/Button.jsx";
 import { magazinesApi, MAGAZINE_PLACEHOLDER } from "@/lib/api";
-import { BACKEND_URL, ORG } from "@/config/constants";
+import { API_ORIGIN, ORG } from "@/config/constants";
 
 // Resolve a possibly-relative backend asset path to an absolute URL.
-const asset = (url) => (url ? (url.startsWith("http") ? url : `${BACKEND_URL}${url}`) : null);
+const asset = (url) => (url ? (url.startsWith("http") ? url : `${API_ORIGIN}${url}`) : null);
 
 /**
  * Single magazine view (reader entry point). Fetched by id via GET /magazines/:id

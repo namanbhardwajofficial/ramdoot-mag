@@ -32,7 +32,7 @@ function Avatar() {
 const VIEWS = { DASHBOARD: 'dashboard', LIST: 'list', DETAIL: 'detail', EDIT: 'edit' };
 
 export default function Users() {
-  const { users, stats, loading, init, fetchAll, createUser, updateUser, suspendUser, removeUser } = useUsers();
+  const { users, stats, loading, init, fetchAll, fetchUser, createUser, updateUser, suspendUser, removeUser } = useUsers();
 
   const [view, setView] = useState(VIEWS.DASHBOARD);
   const [search, setSearch] = useState('');
@@ -63,11 +63,20 @@ export default function Users() {
     } catch (err) { console.error('Failed to delete', err); }
   }
 
+  // Show the list row immediately, then swap in the fuller record (plan,
+  // billing, 2FA) that only GET /users/:id returns.
+  async function openDetail(row) {
+    setSelectedUser(row);
+    setView(VIEWS.DETAIL);
+    const full = await fetchUser(row.id);
+    if (full) setSelectedUser((prev) => (prev?.id === row.id ? { ...prev, ...full } : prev));
+  }
+
   const actionsColumn = {
     key: '_actions', label: '', align: 'right',
     render: (_v, row) => (
       <div className="flex items-center justify-end gap-1">
-        <button onClick={() => { setSelectedUser(row); setView(VIEWS.DETAIL); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><EyeIcon /></button>
+        <button onClick={() => openDetail(row)} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><EyeIcon /></button>
         <button onClick={() => handleDelete(row.id)} className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"><TrashIcon /></button>
         <button onClick={() => { setSelectedUser(row); setView(VIEWS.EDIT); }} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"><PenIcon /></button>
       </div>

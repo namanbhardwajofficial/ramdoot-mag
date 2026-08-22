@@ -26,13 +26,43 @@ export default function NotificationBell({ className = '' }) {
           isRead: n.isRead,
         }));
         setItems(list);
-        setUnread(Number(res?.unreadCount ?? list.filter((n) => !n.isRead).length));
+        // The total lives on `meta`, not the top level — reading it here is
+        // free. The dedicated endpoint below confirms it.
+        const fromMeta = Number(res?.meta?.unreadCount);
+        setUnread(Number.isFinite(fromMeta) ? fromMeta : list.filter((n) => !n.isRead).length);
       })
       .catch((err) => console.warn('notifications', err.message));
+
+    // Authoritative count. GET /notifications pages at 20, so counting unread
+    // rows in the first page under-reports for anyone with more than that.
+    notificationsApi
+      .unreadCount()
+      .then((res) => {
+        if (!alive) return;
+        const n = Number(res?.unreadCount);
+        if (Number.isFinite(n)) setUnread(n);
+      })
+      .catch((err) => console.warn('unreadCount', err.message));
+
     return () => {
       alive = false;
     };
   }, []);
+
+  const markAllRead = async () => {
+    const prevItems = items;
+    const prevUnread = unread;
+    // Optimistic: the drawer is open and the user expects the badge to clear.
+    setItems((list) => list.map((n) => ({ ...n, isRead: true })));
+    setUnread(0);
+    try {
+      await notificationsApi.markAllRead();
+    } catch (err) {
+      console.warn('markAllRead', err.message);
+      setItems(prevItems);
+      setUnread(prevUnread);
+    }
+  };
 
   const dismiss = async (id) => {
     const item = items.find((n) => n.id === id);
@@ -65,27 +95,40 @@ export default function NotificationBell({ className = '' }) {
             You&apos;re all caught up
           </div>
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {items.map((n) => (
-              <li key={n.id} className="flex items-start gap-3 py-4">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400">
-                  <InfoIcon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{n.title}</p>
-                  <p className="mt-1 text-sm text-slate-500">{n.body}</p>
-                </div>
+          <>
+            {unread > 0 && (
+              <div className="flex justify-end pb-2">
                 <button
                   type="button"
-                  onClick={() => dismiss(n.id)}
-                  aria-label="Dismiss"
-                  className="shrink-0 text-slate-300 hover:text-slate-500"
+                  onClick={markAllRead}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-800"
                 >
-                  <XIcon className="h-4 w-4" />
+                  Mark all as read
                 </button>
-              </li>
-            ))}
-          </ul>
+              </div>
+            )}
+            <ul className="divide-y divide-slate-100">
+              {items.map((n) => (
+                <li key={n.id} className="flex items-start gap-3 py-4">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400">
+                    <InfoIcon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800">{n.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{n.body}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismiss(n.id)}
+                    aria-label="Dismiss"
+                    className="shrink-0 text-slate-300 hover:text-slate-500"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Drawer>
     </>
