@@ -45,19 +45,24 @@ export default function useInfluencers() {
   const [influencers, setInfluencers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Set when a primary list fetch fails so the page can show an inline
+  // error with a retry, instead of an empty table that looks like "no data".
+  const [error, setError] = useState(null);
 
   const fetchInfluencers = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       const res = await adminApi.influencers();
       const rows = (res?.influencers || []).map(mapInfluencer);
       setInfluencers(applyFilters(rows, filters));
     } catch (err) {
-      console.error('fetchInfluencers', err);
+      setError(err.message || 'Could not load influencers');
     }
   }, []);
 
   const fetchCampaigns = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       const res = await campaignsApi.list({
         status: filters.status ? String(filters.status).toUpperCase() : undefined,
         limit: 100,
@@ -66,7 +71,7 @@ export default function useInfluencers() {
       if (filters.influencerId) rows = rows.filter((c) => c.influencerId === filters.influencerId);
       setCampaigns(applyFilters(rows, { search: filters.search }));
     } catch (err) {
-      console.error('fetchCampaigns', err);
+      setError(err.message || 'Could not load campaigns');
     }
   }, []);
 
@@ -122,6 +127,7 @@ export default function useInfluencers() {
     influencers,
     campaigns,
     loading,
+    error,
     init,
     fetchInfluencers,
     fetchCampaigns,

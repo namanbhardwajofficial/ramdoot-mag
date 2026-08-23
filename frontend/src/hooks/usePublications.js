@@ -29,9 +29,13 @@ export default function usePublications() {
   const [publications, setPublications] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Set when a primary list fetch fails so the page can show an inline
+  // error with a retry, instead of an empty table that looks like "no data".
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       let rows = listOf(await magazinesApi.list({ limit: 100 })).map(mapPub);
       if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
       if (filters.search) {
@@ -40,7 +44,7 @@ export default function usePublications() {
       }
       setPublications(rows);
     } catch (err) {
-      console.error('fetchPublications', err);
+      setError(err.message || 'Could not load publications');
     }
   }, []);
 
@@ -123,5 +127,5 @@ export default function usePublications() {
 
   const getVersions = useCallback(async () => [], []);
 
-  return { publications, stats, loading, init, fetchAll, fetchStats, publish, update, deactivate, remove, getVersions };
+  return { publications, stats, loading, error, init, fetchAll, fetchStats, publish, update, deactivate, remove, getVersions };
 }

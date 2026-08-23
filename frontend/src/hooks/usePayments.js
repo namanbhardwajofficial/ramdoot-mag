@@ -30,24 +30,29 @@ export default function usePayments() {
   const [payouts, setPayouts] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Set when a primary list fetch fails so the page can show an inline
+  // error with a retry, instead of an empty table that looks like "no data".
+  const [error, setError] = useState(null);
 
   const fetchPayments = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       let rows = listOf(await paymentsApi.mine()).map(mapPayment);
       if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
       setPayments(rows);
     } catch (err) {
-      console.error('fetchPayments', err);
+      setError(err.message || 'Could not load payments');
     }
   }, []);
 
   const fetchPayouts = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       let rows = listOf(await earningsApi.payouts()).map(mapPayout);
       if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
       setPayouts(rows);
     } catch (err) {
-      console.error('fetchPayouts', err);
+      setError(err.message || 'Could not load payouts');
     }
   }, []);
 
@@ -77,5 +82,5 @@ export default function usePayments() {
   const retryPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
   const refundPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
 
-  return { payments, payouts, stats, loading, init, fetchPayments, fetchPayouts, fetchStats, retryPayment, refundPayment };
+  return { payments, payouts, stats, loading, error, init, fetchPayments, fetchPayouts, fetchStats, retryPayment, refundPayment };
 }

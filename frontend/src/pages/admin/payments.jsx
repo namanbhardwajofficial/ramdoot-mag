@@ -17,7 +17,7 @@ import Button from "@/components/Button.jsx";
 const VIEWS = { DASHBOARD: 'dashboard', PAYMENT_LIST: 'payment-list', PAYOUT_LIST: 'payout-list' };
 
 export default function Payments() {
-  const { payments, payouts, stats, loading, init, fetchPayments, fetchPayouts, retryPayment, refundPayment } = usePayments();
+  const { payments, payouts, stats, error, loading, init, fetchPayments, fetchPayouts, retryPayment, refundPayment } = usePayments();
 
   const [view, setView] = useState(VIEWS.DASHBOARD);
   const [paySearch, setPaySearch] = useState('');
@@ -78,7 +78,7 @@ export default function Payments() {
         <h1 className="text-2xl font-bold mb-1">Payment List</h1>
         <p className="text-sm text-slate-500 mb-4">Every payment received from subscribers</p>
         <Toolbar statusFilter={payStatusFilter} onStatusChange={setPayStatusFilter} statusOptions={Object.values(PAYMENT_STATUSES)} search={paySearch} onSearchChange={setPaySearch} onExport={() => {}} />
-        <DataTable columns={paymentCols} data={payments} loading={loading} />
+        <DataTable columns={paymentCols} data={payments} loading={loading} error={error} onRetry={fetchPayments} />
         <PaymentDetailsDrawer open={drawerType === 'details'} payment={selectedPayment} onClose={closeAll} onInitiateRefund={() => handleRefund(selectedPayment.id)} onViewStatus={() => setDrawerType('refund-steps')} />
         <PaymentFailedModal open={drawerType === 'failed-modal'} payment={selectedPayment} onClose={closeAll} onRetry={() => handleRetry(selectedPayment.id)} />
         <PaymentRefundDrawer open={drawerType === 'refund-steps'} onClose={closeAll} />
@@ -92,7 +92,7 @@ export default function Payments() {
         <h1 className="text-2xl font-bold mb-1">Influencer Payout</h1>
         <p className="text-sm text-slate-500 mb-4">Commission paid out to influencers</p>
         <Toolbar statusFilter={payoutStatusFilter} onStatusChange={setPayoutStatusFilter} statusOptions={Object.values(PAYOUT_STATUSES)} search={payoutSearch} onSearchChange={setPayoutSearch} onExport={() => {}} />
-        <DataTable columns={payoutCols} data={payouts} loading={loading} />
+        <DataTable columns={payoutCols} data={payouts} loading={loading} error={error} onRetry={fetchPayouts} />
         <InfluencerPayoutDrawer open={drawerType === 'payout'} payout={selectedPayout} onClose={closeAll} />
       </>
     );
@@ -127,7 +127,7 @@ export default function Payments() {
           <p className="text-sm text-slate-500">Every payment received from subscribers</p>
         </div>
         <Toolbar statusFilter={payStatusFilter} onStatusChange={setPayStatusFilter} statusOptions={Object.values(PAYMENT_STATUSES)} search={paySearch} onSearchChange={setPaySearch} />
-        <DataTable columns={paymentCols} data={payments.slice(0, 5)} loading={loading} />
+        <DataTable columns={paymentCols} data={payments.slice(0, 5)} loading={loading} error={error} onRetry={fetchPayments} />
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-slate-400">View All details at once?</span>
           <button onClick={() => setView(VIEWS.PAYMENT_LIST)} className="text-sm font-medium text-slate-700 hover:text-slate-900 flex items-center gap-1">
@@ -143,7 +143,7 @@ export default function Payments() {
           <p className="text-sm text-slate-500">Commission paid out to influencers</p>
         </div>
         <Toolbar statusFilter={payoutStatusFilter} onStatusChange={setPayoutStatusFilter} statusOptions={Object.values(PAYOUT_STATUSES)} search={payoutSearch} onSearchChange={setPayoutSearch} />
-        <DataTable columns={payoutCols} data={payouts.slice(0, 5)} loading={loading} />
+        <DataTable columns={payoutCols} data={payouts.slice(0, 5)} loading={loading} error={error} onRetry={fetchPayouts} />
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-slate-400">View All details at once?</span>
           <button onClick={() => setView(VIEWS.PAYOUT_LIST)} className="text-sm font-medium text-slate-700 hover:text-slate-900 flex items-center gap-1">

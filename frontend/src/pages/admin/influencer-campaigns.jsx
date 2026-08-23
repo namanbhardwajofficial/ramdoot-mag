@@ -29,7 +29,7 @@ const VIEWS = { INFLUENCER_LIST: 'influencer-list', CAMPAIGN_LIST: 'campaign-lis
 
 export default function InfluencerCampaigns() {
   const {
-    influencers, campaigns, loading, init, fetchInfluencers, fetchCampaigns,
+    influencers, campaigns, loading, error, init, fetchInfluencers, fetchCampaigns,
     restrictInfluencer, createCampaign,
   } = useInfluencers();
 
@@ -148,7 +148,7 @@ export default function InfluencerCampaigns() {
           onSearchChange={setCampSearch}
         />
 
-        <DataTable columns={campaignColumns} data={campaigns} loading={loading} />
+        <DataTable columns={campaignColumns} data={campaigns} loading={loading} error={error} onRetry={() => fetchCampaigns({ status: statusFilter, search })} />
 
         <CampaignDetailsDrawer
           open={showCampaignDrawer}
@@ -175,7 +175,7 @@ export default function InfluencerCampaigns() {
         onSearchChange={setSearch}
       />
 
-      <DataTable columns={influencerColumns} data={influencers} loading={loading} />
+      <DataTable columns={influencerColumns} data={influencers} loading={loading} error={error} onRetry={() => fetchInfluencers({ status: statusFilter, search })} />
 
       <div className="flex items-center justify-between mt-3">
         <span className="text-xs text-slate-400">View All details at once?</span>

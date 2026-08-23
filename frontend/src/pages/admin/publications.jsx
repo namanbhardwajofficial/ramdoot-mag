@@ -42,6 +42,7 @@ export default function Publications() {
     publications,
     stats,
     loading,
+    error,
     init,
     fetchAll,
     publish,
@@ -263,7 +264,7 @@ export default function Publications() {
           search={search}
           onSearchChange={setSearch}
         />
-        <DataTable columns={columns} data={publications} loading={loading} />
+        <DataTable columns={columns} data={publications} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
 
         <MagazineDetailsDrawer
           open={showDetails}
@@ -367,7 +368,7 @@ export default function Publications() {
           search={search}
           onSearchChange={setSearch}
         />
-        <DataTable columns={columns} data={publications} loading={loading} />
+        <DataTable columns={columns} data={publications} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
       </section>
 
       <MagazineDetailsDrawer

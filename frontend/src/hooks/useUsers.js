@@ -76,9 +76,13 @@ export default function useUsers() {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Set when a primary list fetch fails so the page can show an inline
+  // error with a retry, instead of an empty table that looks like "no data".
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       const res = await usersApi.list({
         search: filters.search || undefined,
         status: filters.status ? String(filters.status).toUpperCase() : undefined,
@@ -86,7 +90,7 @@ export default function useUsers() {
       });
       setUsers(listOf(res).map(mapUser));
     } catch (err) {
-      console.error('fetchUsers', err);
+      setError(err.message || 'Could not load users');
     }
   }, []);
 
@@ -159,6 +163,7 @@ export default function useUsers() {
   return {
     users,
     stats,
+    error,
     loading,
     init,
     fetchAll,

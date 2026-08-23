@@ -52,7 +52,7 @@ function AddPlanModal({ plans, onClose, onSubmit }) {
 }
 
 export default function Subscriptions() {
-  const { subscriptions, plans, stats, loading, init, fetchAll, create, update, toggleStatus, remove } = useSubscriptions();
+  const { subscriptions, plans, stats, error, loading, init, fetchAll, create, update, toggleStatus, remove } = useSubscriptions();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -149,7 +149,7 @@ export default function Subscriptions() {
           <p className="text-sm text-slate-500">Every plan your subscribers can buy</p>
         </div>
         <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(SUBSCRIPTION_STATUSES)} search={search} onSearchChange={setSearch} />
-        <DataTable columns={columns} data={subscriptions} loading={loading} emptyMessage="No subscriptions found" />
+        <DataTable columns={columns} data={subscriptions} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} emptyMessage="No subscriptions found" />
       </section>
 
       {showModal && <AddPlanModal plans={plans} onClose={() => setShowModal(false)} onSubmit={handleCreate} />}

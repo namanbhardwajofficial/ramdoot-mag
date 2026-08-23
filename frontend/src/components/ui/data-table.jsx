@@ -1,6 +1,21 @@
-export default function DataTable({ columns, data, emptyMessage = 'No data found', loading = false }) {
+import ErrorState from './error-state';
+
+export default function DataTable({
+  columns,
+  data,
+  emptyMessage = 'No data found',
+  loading = false,
+  error = null,
+  onRetry,
+}) {
   if (loading) {
     return <div className="text-center py-12 text-slate-400">Loading...</div>;
+  }
+
+  // A failed load must not look like an empty table — "No data found" would be
+  // a lie when the request never came back.
+  if (error) {
+    return <ErrorState message={error} onRetry={onRetry} />;
   }
 
   return (

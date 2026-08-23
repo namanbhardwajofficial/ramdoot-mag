@@ -31,9 +31,13 @@ export default function useSubscriptions() {
   const [plans, setPlans] = useState([]);
   const [stats, setStats] = useState({ activeSubscribers: 0, newSubscriptions: 0, cancellations: 0 });
   const [loading, setLoading] = useState(true);
+  // Set when a primary list fetch fails so the page can show an inline
+  // error with a retry, instead of an empty table that looks like "no data".
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       let rows = listOf(await subscriptionsApi.plans()).map(mapPlanRow);
       if (filters.search) {
         const q = filters.search.toLowerCase();
@@ -44,7 +48,7 @@ export default function useSubscriptions() {
       if (filters.status) rows = rows.filter((r) => r.status === filters.status);
       setSubscriptions(rows);
     } catch (err) {
-      console.error('fetchSubscriptions', err);
+      setError(err.message || 'Could not load subscriptions');
     }
   }, []);
 
@@ -120,5 +124,5 @@ export default function useSubscriptions() {
     [subscriptions, fetchStats, fetchAll],
   );
 
-  return { subscriptions, plans, stats, loading, init, fetchAll, fetchStats, create, update, toggleStatus, remove };
+  return { subscriptions, plans, stats, loading, error, init, fetchAll, fetchStats, create, update, toggleStatus, remove };
 }

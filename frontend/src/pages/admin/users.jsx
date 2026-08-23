@@ -32,7 +32,7 @@ function Avatar() {
 const VIEWS = { DASHBOARD: 'dashboard', LIST: 'list', DETAIL: 'detail', EDIT: 'edit' };
 
 export default function Users() {
-  const { users, stats, loading, init, fetchAll, fetchUser, createUser, updateUser, suspendUser, removeUser } = useUsers();
+  const { users, stats, error, loading, init, fetchAll, fetchUser, createUser, updateUser, suspendUser, removeUser } = useUsers();
 
   const [view, setView] = useState(VIEWS.DASHBOARD);
   const [search, setSearch] = useState('');
@@ -187,7 +187,7 @@ export default function Users() {
           onSearchChange={setSearch}
         />
 
-        <DataTable columns={listColumns} data={users} loading={loading} />
+        <DataTable columns={listColumns} data={users} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search, sort: sortBy })} />
       </>
     );
   }
@@ -267,7 +267,7 @@ export default function Users() {
           onSearchChange={setSearch}
         />
 
-        <DataTable columns={dashboardColumns} data={users.slice(0, 10)} loading={loading} />
+        <DataTable columns={dashboardColumns} data={users.slice(0, 10)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search, sort: sortBy })} />
 
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-slate-400">View All details at once?</span>
