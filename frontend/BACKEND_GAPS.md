@@ -489,6 +489,27 @@ entirely on the outbound email actually being delivered, which we can't verify f
 the frontend.
 
 ---
+## 13. Minor: no time-series data for the dashboard stat cards
+
+Every stat card on the admin dashboards has a sparkline slot. Nothing fills it:
+the frontend was drawing a hardcoded curve, which meant "Churned Users 0" shipped
+with a falling red trend line. That fake curve is now removed, so the cards render
+without a chart.
+
+To turn them back on we need any endpoint that returns a value per period, e.g.
+
+```
+GET /api/v1/admin/stats/timeseries?metric=users&period=month&points=12
+-> { data: [{ period: "2026-08", value: 6 }, ...] }
+```
+
+Metrics we would use: users, active users, paid users, revenue, payouts,
+subscriptions, readers. Low priority — the numbers themselves are correct today,
+this only restores the trend visual.
+
+Related: `GET /payments/me` is the only payments list, so an admin sees only their
+own payments. "Total Revenue" on `/admin/payments` is therefore the *admin's* revenue,
+not the platform's. An admin-scoped payments list would fix that (see #4).
 ## Suggested order
 
 | # | Item | Why this position |

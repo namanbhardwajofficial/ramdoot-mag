@@ -33,7 +33,7 @@ the file.
 **Needs from you:** either a donation feature, or an external giving URL to link
 out to. Wiring is ~10 minutes once decided.
 
-### 1.2 Errors are mostly invisible to users — **in progress**
+### 1.2 Errors are mostly invisible to users — **admin done, in progress**
 
 **50** catch handlers logged to the console only (not 34 — the first count used
 a single-line grep and missed every block-form `catch (e) { console.error(...) }`).
@@ -56,12 +56,63 @@ Two real bugs surfaced while doing this:
 Verified end to end: submitting the Add User form with an existing address now
 shows *"Email already registered"*; before, the modal just sat there.
 
-**Data loads — 39 remaining.** These need a different treatment: an inline
-error with a retry action, not a toast, because they fire on mount and a toast
-on page load is noise. Concentrated in the six `src/hooks/use*.js` data hooks
-(they swallow errors before the page ever sees them) plus the dashboards and
-list pages. The hooks are the place to start — fixing those covers most pages
-at once. Roughly half a day.
+**Data loads — admin done, 28 remaining.** These need a different treatment:
+an inline error with a retry action, not a toast, because they fire on mount
+and a toast on page load is noise.
+
+The five `src/hooks/use*.js` data hooks swallowed failures before the page
+could ever see them, so page-level work alone would have been useless. Each
+now exposes an `error`, and `DataTable` takes `error`/`onRetry`. A failed load
+used to fall through to **"No data found"** — asserting the list was empty
+when the request never came back.
+
+The stat cards had the same problem one level up. `stats` stayed `null` on
+failure and every card read `stats?.x ?? 0`, so an outage rendered a confident
+**0**. `<StatCard>` and the new `<StatValue>` now render a dash when the value
+is unknown. Verified by pointing `VITE_BACKEND_URL` at a closed port: all five
+cards show `—` and the table shows *"Couldn't load this / Try again"*.
+
+**Remaining 28**, all page-local fetches that never reach a hook: the admin
+dashboard (4), influencer pages (`Campaigns`, `Earnings` ×3,
+`InfluencerDashboard` ×3, `CampaignDetails`, `RequestPayout` ×2,
+`RequestedPayout`), user pages (`Home`, `Magazines`, `Subscriptions`),
+settings panels (`BillingsPanel` ×2, both `MyDetailsPanel`), the notification
+bell (2), `PaymentsChart`, `CampaignDetailsDrawer`, `InfluencerDetail` and
+`useSecurity.loadDevices`. Each needs local `error` state — they fetch
+directly rather than through a hook.
+
+### 1.2b Fabricated trend lines — **done**
+
+`MiniChart` drew one of two hardcoded SVG curves chosen by a `trend` prop, on
+29 cards. It was not data. "Churned Users 0" came with a falling red line, and
+with the backend dead a card showed **0 beside a climbing green curve**.
+
+It now plots a `series` and renders nothing without one. No endpoint returns
+per-period history (see `BACKEND_GAPS.md` §13), so the cards currently render
+without a chart; wiring is trivial once a series exists. The 20 dead `trend`
+props are gone.
+
+Two related fixes in the same pass:
+
+- `admin/payments.jsx` read `influencerPayouts`, `subscriptions`, `singleSales`
+  and `netRevenue`, but the hook only ever set `totalRevenue`. **Four of the
+  five cards were permanently ₹0** regardless of backend state. All five are
+  now derived from real payments and payouts.
+- Hardcoded `changeLabel="+ 100% vs last month"` growth claims removed from
+  the payments and publications cards — nothing computed them.
+
+### 1.2c Duplicate requests on every admin page — **done**
+
+Each data hook ran a `fetchStats` that re-fetched the *same endpoint* the list
+had just fetched, and every page paired `init()` with a second effect that
+fetched again the moment `loading` flipped false. Measured on
+`/admin/subscriptions` (StrictMode off, so these are production numbers):
+**4 requests to `/api/v1/subscription-plans` per page load, now 1.**
+
+Stats are computed from the response the list already fetched, and the
+duplicate mount fetch is gone via `src/hooks/useFilterRefetch.js`, which skips
+the first settled filter value. Filtering still works in both directions —
+verified: 6 rows, search "Priya" → 1 row, clear → 6 rows.
 
 ### 1.3 Untested empty state
 

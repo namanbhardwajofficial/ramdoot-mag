@@ -80,7 +80,12 @@ export default function useUsers() {
   // error with a retry, instead of an empty table that looks like "no data".
   const [error, setError] = useState(null);
 
+  // Filtering happens server-side here, so a filtered response can't be used
+  // for the cards — they must stay whole-account totals. An unfiltered load
+  // (mount, and after every mutation) refreshes them from the same response;
+  // a filtered one leaves the previous totals alone.
   const fetchAll = useCallback(async (filters = {}) => {
+    const filtered = !!(filters.search || filters.status);
     try {
       setError(null);
       const res = await usersApi.list({
@@ -88,8 +93,11 @@ export default function useUsers() {
         status: filters.status ? String(filters.status).toUpperCase() : undefined,
         limit: 100,
       });
-      setUsers(listOf(res).map(mapUser));
+      const rows = listOf(res).map(mapUser);
+      setUsers(rows);
+      if (!filtered) setStats(computeStats(rows));
     } catch (err) {
+      if (!filtered) setStats(null);
       setError(err.message || 'Could not load users');
     }
   }, []);
@@ -105,20 +113,11 @@ export default function useUsers() {
     }
   }, []);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await usersApi.list({ limit: 100 });
-      setStats(computeStats(listOf(res).map(mapUser)));
-    } catch (err) {
-      console.error('fetchUserStats', err);
-    }
-  }, []);
-
   const init = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchAll()]);
+    await fetchAll();
     setLoading(false);
-  }, [fetchStats, fetchAll]);
+  }, [fetchAll]);
 
   const createUser = useCallback(
     async (form) => {
@@ -128,10 +127,10 @@ export default function useUsers() {
         phone: form.phone || undefined,
         role: toRole(form.role),
       });
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
       return user;
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   // Only a status change exists for other users on the backend.
@@ -139,10 +138,10 @@ export default function useUsers() {
     async (id, payload = {}) => {
       const status = String(payload.status || 'suspended').toUpperCase();
       const user = await usersApi.setStatus(id, status);
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
       return user;
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   const deactivateUser = useCallback((id) => suspendUser(id, { status: 'suspended' }), [suspendUser]);
@@ -167,7 +166,6 @@ export default function useUsers() {
     loading,
     init,
     fetchAll,
-    fetchStats,
     fetchUser,
     createUser,
     deactivateUser,

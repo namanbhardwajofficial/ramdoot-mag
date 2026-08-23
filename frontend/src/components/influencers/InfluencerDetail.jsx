@@ -106,7 +106,7 @@ function AudienceTab() {
           <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
         </div>
         <p className="text-3xl font-bold mt-2">{data.refundRate}</p>
-        <MiniChart color={CHART_COLORS.success} trend="up" />
+        <MiniChart color={CHART_COLORS.success} />
       </div>
       <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
         <div className="flex items-center justify-between mb-1">
@@ -117,7 +117,7 @@ function AudienceTab() {
           <p className="text-3xl font-bold">{data.paidVsFree}</p>
           <span className="text-xs text-emerald-600 font-medium">{data.paidChange}</span>
         </div>
-        <MiniChart color={CHART_COLORS.success} trend="up" />
+        <MiniChart color={CHART_COLORS.success} />
       </div>
       <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
         <div className="flex items-center justify-between mb-1">
@@ -125,7 +125,7 @@ function AudienceTab() {
           <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
         </div>
         <p className="text-3xl font-bold mt-2">{ORG.currencySymbol}{data.revenuePerSub}</p>
-        <MiniChart color={CHART_COLORS.success} trend="up" />
+        <MiniChart color={CHART_COLORS.success} />
       </div>
     </div>
   );

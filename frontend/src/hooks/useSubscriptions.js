@@ -29,16 +29,27 @@ function mapPlanOption(p) {
 export default function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [plans, setPlans] = useState([]);
-  const [stats, setStats] = useState({ activeSubscribers: 0, newSubscriptions: 0, cancellations: 0 });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   // Set when a primary list fetch fails so the page can show an inline
   // error with a retry, instead of an empty table that looks like "no data".
   const [error, setError] = useState(null);
 
+  // One request feeds the table, the cards and the plan dropdowns — all three
+  // used to fetch /subscriptions/plans separately on every mount. Filtering is
+  // client-side, so the cards keep describing every plan, not the filtered set.
   const fetchAll = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      let rows = listOf(await subscriptionsApi.plans()).map(mapPlanRow);
+      const raw = listOf(await subscriptionsApi.plans());
+      const all = raw.map(mapPlanRow);
+      setPlans(raw.map(mapPlanOption));
+      setStats({
+        activeSubscribers: all.reduce((n, p) => n + (p.subscriberCount || 0), 0),
+        newSubscriptions: 0,
+        cancellations: 0,
+      });
+      let rows = all;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         rows = rows.filter(
@@ -48,30 +59,16 @@ export default function useSubscriptions() {
       if (filters.status) rows = rows.filter((r) => r.status === filters.status);
       setSubscriptions(rows);
     } catch (err) {
+      setStats(null);
       setError(err.message || 'Could not load subscriptions');
-    }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const rows = listOf(await subscriptionsApi.plans()).map(mapPlanRow);
-      const activeSubscribers = rows.reduce((s, p) => s + (p.subscriberCount || 0), 0);
-      setStats({ activeSubscribers, newSubscriptions: 0, cancellations: 0 });
-    } catch (err) {
-      console.error('fetchSubStats', err);
     }
   }, []);
 
   const init = useCallback(async () => {
     setLoading(true);
-    try {
-      setPlans(listOf(await subscriptionsApi.plans()).map(mapPlanOption));
-    } catch (err) {
-      console.error('fetchPlans', err);
-    }
-    await Promise.all([fetchStats(), fetchAll()]);
+    await fetchAll();
     setLoading(false);
-  }, [fetchStats, fetchAll]);
+  }, [fetchAll]);
 
   // The Add modal only collects planId/createdBy; a real create needs
   // name+price+billingCycle, so attempt the API call only when those exist.
@@ -85,9 +82,9 @@ export default function useSubscriptions() {
           description: form.description,
         });
       }
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   const update = useCallback(
@@ -101,17 +98,17 @@ export default function useSubscriptions() {
       if (form?.price != null && form.price !== '') patch.price = Number(form.price);
       if (form?.billingCycle) patch.billingCycle = String(form.billingCycle).toUpperCase();
       if (Object.keys(patch).length) await subscriptionsApi.updatePlan(id, patch);
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
     },
-    [subscriptions, fetchStats, fetchAll],
+    [subscriptions, fetchAll],
   );
 
   const toggleStatus = useCallback(
     async (sub) => {
       await subscriptionsApi.togglePlan(sub.id);
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   // No delete-plan endpoint; deactivating is the closest real action.
@@ -119,10 +116,10 @@ export default function useSubscriptions() {
     async (id) => {
       const current = subscriptions.find((s) => s.id === id);
       if (!current || current.status === 'active') await subscriptionsApi.togglePlan(id);
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
     },
-    [subscriptions, fetchStats, fetchAll],
+    [subscriptions, fetchAll],
   );
 
-  return { subscriptions, plans, stats, loading, error, init, fetchAll, fetchStats, create, update, toggleStatus, remove };
+  return { subscriptions, plans, stats, loading, error, init, fetchAll, create, update, toggleStatus, remove };
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import StatCard from "@/components/ui/stat-card";
+import useFilterRefetch from '@/hooks/useFilterRefetch';
+import StatCard, { StatValue } from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import DataTable from "@/components/ui/data-table";
 import Toolbar from "@/components/ui/toolbar";
@@ -66,9 +67,7 @@ export default function Publications() {
     init();
   }, [init]);
 
-  useEffect(() => {
-    if (!loading) fetchAll({ status: statusFilter, search });
-  }, [statusFilter, search, loading, fetchAll]);
+  useFilterRefetch(fetchAll, { status: statusFilter, search }, !loading);
 
   async function handlePublish(form) {
     try {
@@ -307,18 +306,15 @@ export default function Publications() {
       <div className="flex gap-4 mb-8 flex-wrap">
         <StatCard
           title="Total Readers"
-          value={stats?.totalReaders ?? 0}
+          value={stats?.totalReaders}
           color={CHART_COLORS.success}
-          trend="up"
-          changeLabel="+ 100% vs last month"
-          changeColor="text-emerald-600"
         />
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">
             Total Publications
           </span>
           <div className="text-3xl font-bold text-slate-900 mt-3">
-            {stats?.totalPublications ?? 0}
+            <StatValue value={stats?.totalPublications} />
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
@@ -329,7 +325,7 @@ export default function Publications() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xl font-bold text-slate-900">
-                  {stats?.liveCount ?? 0}
+                  <StatValue value={stats?.liveCount} />
                 </span>
                 <span className="text-sm text-slate-500 ml-2">
                   Live Magazines
@@ -340,7 +336,7 @@ export default function Publications() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xl font-bold text-slate-900">
-                  {String(stats?.draftCount ?? 0).padStart(2, "0")}
+                  <StatValue value={stats?.draftCount} format={(n) => String(n).padStart(2, "0")} />
                 </span>
                 <span className="text-sm text-slate-500 ml-2">
                   Draft Magazines

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import StatCard, { MiniChart } from '@/components/ui/stat-card';
+import useFilterRefetch from '@/hooks/useFilterRefetch';
+import StatCard, { MiniChart, StatValue } from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
@@ -43,9 +44,7 @@ export default function Users() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => { init(); }, [init]);
-  useEffect(() => {
-    if (!loading) fetchAll({ status: statusFilter, search, sort: sortBy });
-  }, [statusFilter, search, sortBy, loading, fetchAll]);
+  useFilterRefetch(fetchAll, { status: statusFilter, search, sort: sortBy }, !loading);
 
   async function handleAddUser(form) {
     try {
@@ -207,15 +206,13 @@ export default function Users() {
       <div className="flex gap-4 mb-4 flex-wrap">
         <StatCard
           title="Total Users"
-          value={stats?.totalUsers ?? 0}
+          value={stats?.totalUsers}
           color={CHART_COLORS.success}
-          trend="up"
         />
         <StatCard
           title="Active Users"
-          value={stats?.activeUsers ?? 0}
+          value={stats?.activeUsers}
           color={CHART_COLORS.success}
-          trend="up"
         />
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <div className="flex items-center justify-between mb-1">
@@ -224,11 +221,11 @@ export default function Users() {
           </div>
           <div className="flex items-baseline gap-3 mt-2">
             <span className="text-3xl font-bold text-slate-900">
-              {(stats?.paidUsers ?? 0).toLocaleString('en-IN')}
+              <StatValue value={stats?.paidUsers} />
             </span>
             <span className="text-xs text-emerald-600 font-medium">{stats?.paidChange}</span>
           </div>
-          <MiniChart color={CHART_COLORS.success} trend="up" />
+          {stats && <MiniChart color={CHART_COLORS.success} />}
         </div>
       </div>
 
@@ -237,16 +234,16 @@ export default function Users() {
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Churned Users</span>
           <div className="text-3xl font-bold text-slate-900 mt-2">
-            {(stats?.churnedUsers ?? 0).toLocaleString('en-IN')}
+            <StatValue value={stats?.churnedUsers} />
           </div>
-          <MiniChart color={CHART_COLORS.danger} trend="down" />
+          {stats && <MiniChart color={CHART_COLORS.danger} />}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
           <span className="text-sm font-medium text-slate-700">Inactive Users</span>
           <div className="text-3xl font-bold text-slate-900 mt-2">
-            {(stats?.inactiveUsers ?? 0).toLocaleString('en-IN')}
+            <StatValue value={stats?.inactiveUsers} />
           </div>
-          <MiniChart color={CHART_COLORS.success} trend="up" />
+          {stats && <MiniChart color={CHART_COLORS.success} />}
         </div>
       </div>
 

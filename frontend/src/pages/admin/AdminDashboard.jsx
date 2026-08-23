@@ -89,8 +89,8 @@ export default function AdminDashboard() {
 
       {/* 3. Top Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Total Revenue" value={counts ? inr(counts.revenueYTD) : '₹ 0'} color={CHART_COLORS.success} trend="up" isCurrency />
-        <StatCard title="Active Subscriptions" value={counts ? counts.activeSubscriptions.toLocaleString('en-IN') : '0'} color={CHART_COLORS.success} trend="up" />
+        <StatCard title="Total Revenue" value={counts ? inr(counts.revenueYTD) : '₹ 0'} color={CHART_COLORS.success} isCurrency />
+        <StatCard title="Active Subscriptions" value={counts ? counts.activeSubscriptions.toLocaleString('en-IN') : '0'} color={CHART_COLORS.success} />
         <div className="bg-white rounded-xl border border-slate-200 p-5">
            <div className="flex items-center justify-between mb-1">
              <span className="text-sm font-medium text-slate-700">Magazine Sales</span>
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
              <span className="text-3xl font-bold text-slate-900">{counts ? counts.totalMagazines.toLocaleString('en-IN') : '0'}</span>
              <span className="text-xs text-slate-500">magazines</span>
            </div>
-           <MiniChart color={CHART_COLORS.success} trend="up" />
+           <MiniChart color={CHART_COLORS.success} />
         </div>
       </div>
 

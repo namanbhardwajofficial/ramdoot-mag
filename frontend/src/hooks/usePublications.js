@@ -33,10 +33,15 @@ export default function usePublications() {
   // error with a retry, instead of an empty table that looks like "no data".
   const [error, setError] = useState(null);
 
+  // Filtering is client-side, so one response feeds both the table and the
+  // cards. The cards stay unfiltered totals, and a failure clears them so they
+  // read as unknown instead of a fabricated 0.
   const fetchAll = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      let rows = listOf(await magazinesApi.list({ limit: 100 })).map(mapPub);
+      const all = listOf(await magazinesApi.list({ limit: 100 })).map(mapPub);
+      setStats(computeStats(all));
+      let rows = all;
       if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
       if (filters.search) {
         const q = filters.search.toLowerCase();
@@ -44,23 +49,16 @@ export default function usePublications() {
       }
       setPublications(rows);
     } catch (err) {
+      setStats(null);
       setError(err.message || 'Could not load publications');
-    }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      setStats(computeStats(listOf(await magazinesApi.list({ limit: 100 })).map(mapPub)));
-    } catch (err) {
-      console.error('fetchPublicationStats', err);
     }
   }, []);
 
   const init = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchAll()]);
+    await fetchAll();
     setLoading(false);
-  }, [fetchStats, fetchAll]);
+  }, [fetchAll]);
 
   const publish = useCallback(
     async (form) => {
@@ -86,10 +84,10 @@ export default function usePublications() {
         notifySubscribers: !!form.sendNotification,
       });
 
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
       return published;
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   const update = useCallback(
@@ -101,31 +99,31 @@ export default function usePublications() {
       if (form?.price != null && form.price !== '') patch.price = Number(form.price);
       if (form?.status) patch.status = String(form.status).toUpperCase();
       const pub = await magazinesApi.update(id, patch);
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
       return pub;
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   const deactivate = useCallback(
     async (id) => {
       const pub = await magazinesApi.update(id, { status: 'PAUSED' });
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
       return pub;
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   // No hard-delete endpoint; archive instead.
   const remove = useCallback(
     async (id) => {
       await magazinesApi.update(id, { status: 'ARCHIVED' });
-      await Promise.all([fetchStats(), fetchAll()]);
+      await fetchAll();
     },
-    [fetchStats, fetchAll],
+    [fetchAll],
   );
 
   const getVersions = useCallback(async () => [], []);
 
-  return { publications, stats, loading, error, init, fetchAll, fetchStats, publish, update, deactivate, remove, getVersions };
+  return { publications, stats, loading, error, init, fetchAll, publish, update, deactivate, remove, getVersions };
 }

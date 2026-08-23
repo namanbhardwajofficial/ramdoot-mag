@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { paymentsApi, earningsApi, listOf, lc } from '@/lib/api';
 
 // NOTE: the backend exposes only the *current user's* payments (/payments/me)
@@ -25,22 +25,58 @@ function mapPayout(p) {
   };
 }
 
+const sum = (rows) => rows.reduce((a, r) => a + r.amount, 0);
+
+// Revenue splits. `relatedType` is set when the order is created; the checkout
+// flow tags subscription purchases as "subscription", so anything else that
+// settled is a one-off sale.
+function paymentTotalsOf(rows) {
+  const settled = rows.filter((p) => p.status === 'success');
+  const subs = settled.filter((p) => String(p.relatedType || '').toLowerCase() === 'subscription');
+  const total = sum(settled);
+  return { totalRevenue: total, subscriptions: sum(subs), singleSales: total - sum(subs) };
+}
+
+function payoutTotalsOf(rows) {
+  return { influencerPayouts: sum(rows.filter((p) => p.status === 'success')) };
+}
+
 export default function usePayments() {
   const [payments, setPayments] = useState([]);
   const [payouts, setPayouts] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   // Set when a primary list fetch fails so the page can show an inline
   // error with a retry, instead of an empty table that looks like "no data".
   const [error, setError] = useState(null);
 
+  // Totals are kept apart from the table rows so the cards keep describing the
+  // whole account while the table is filtered down.
+  const [paymentTotals, setPaymentTotals] = useState(null);
+  const [payoutTotals, setPayoutTotals] = useState(null);
+
+  // Null until something loads, so the cards can show "—" rather than claiming
+  // a real ₹0 when the request failed.
+  const stats = useMemo(() => {
+    if (!paymentTotals && !payoutTotals) return null;
+    const revenue = paymentTotals?.totalRevenue ?? 0;
+    const paidOut = payoutTotals?.influencerPayouts ?? 0;
+    return {
+      totalRevenue: revenue,
+      subscriptions: paymentTotals?.subscriptions ?? 0,
+      singleSales: paymentTotals?.singleSales ?? 0,
+      influencerPayouts: paidOut,
+      netRevenue: revenue - paidOut,
+    };
+  }, [paymentTotals, payoutTotals]);
+
   const fetchPayments = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      let rows = listOf(await paymentsApi.mine()).map(mapPayment);
-      if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
-      setPayments(rows);
+      const all = listOf(await paymentsApi.mine()).map(mapPayment);
+      setPaymentTotals(paymentTotalsOf(all));
+      setPayments(filters.status ? all.filter((p) => p.status === lc(filters.status)) : all);
     } catch (err) {
+      setPaymentTotals(null);
       setError(err.message || 'Could not load payments');
     }
   }, []);
@@ -48,39 +84,24 @@ export default function usePayments() {
   const fetchPayouts = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      let rows = listOf(await earningsApi.payouts()).map(mapPayout);
-      if (filters.status) rows = rows.filter((p) => p.status === lc(filters.status));
-      setPayouts(rows);
+      const all = listOf(await earningsApi.payouts()).map(mapPayout);
+      setPayoutTotals(payoutTotalsOf(all));
+      setPayouts(filters.status ? all.filter((p) => p.status === lc(filters.status)) : all);
     } catch (err) {
+      setPayoutTotals(null);
       setError(err.message || 'Could not load payouts');
-    }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const rows = listOf(await paymentsApi.mine()).map(mapPayment);
-      const sum = (s) =>
-        rows.filter((p) => p.status === s).reduce((a, p) => a + p.amount, 0);
-      setStats({
-        totalRevenue: sum('success'),
-        successful: rows.filter((p) => p.status === 'success').length,
-        failed: rows.filter((p) => p.status === 'failed').length,
-        refunded: rows.filter((p) => p.status === 'refunded').length,
-      });
-    } catch (err) {
-      console.error('fetchPaymentStats', err);
     }
   }, []);
 
   const init = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchPayments(), fetchPayouts()]);
+    await Promise.all([fetchPayments(), fetchPayouts()]);
     setLoading(false);
-  }, [fetchStats, fetchPayments, fetchPayouts]);
+  }, [fetchPayments, fetchPayouts]);
 
   // No retry/refund endpoints yet — refresh so the UI stays consistent.
   const retryPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
   const refundPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
 
-  return { payments, payouts, stats, loading, error, init, fetchPayments, fetchPayouts, fetchStats, retryPayment, refundPayment };
+  return { payments, payouts, stats, loading, error, init, fetchPayments, fetchPayouts, retryPayment, refundPayment };
 }

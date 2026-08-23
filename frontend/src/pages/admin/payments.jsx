@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useFilterRefetch from '@/hooks/useFilterRefetch';
 import StatCard from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
@@ -30,8 +31,8 @@ export default function Payments() {
   const [selectedPayout, setSelectedPayout] = useState(null);
 
   useEffect(() => { init(); }, [init]);
-  useEffect(() => { if (!loading) fetchPayments({ status: payStatusFilter, search: paySearch }); }, [payStatusFilter, paySearch, loading, fetchPayments]);
-  useEffect(() => { if (!loading) fetchPayouts({ status: payoutStatusFilter, search: payoutSearch }); }, [payoutStatusFilter, payoutSearch, loading, fetchPayouts]);
+  useFilterRefetch(fetchPayments, { status: payStatusFilter, search: paySearch }, !loading);
+  useFilterRefetch(fetchPayouts, { status: payoutStatusFilter, search: payoutSearch }, !loading);
 
   function openPayment(p) {
     setSelectedPayment(p);
@@ -109,14 +110,14 @@ export default function Payments() {
       </header>
 
       <div className="flex gap-4 mb-4 flex-wrap">
-        <StatCard title="Total Revenue" value={stats?.totalRevenue ?? 0} prefix={ORG.currencySymbol} color={CHART_COLORS.success} trend="up" changeLabel="+ 100% vs last month" changeColor="text-emerald-600" />
-        <StatCard title="Influencer Payouts" value={stats?.influencerPayouts ?? 0} prefix={ORG.currencySymbol} color={CHART_COLORS.danger} trend="down" changeLabel="+ 100% vs last month" changeColor="text-emerald-600" />
-        <StatCard title="Subscriptions" value={stats?.subscriptions ?? 0} prefix={ORG.currencySymbol} color={CHART_COLORS.success} trend="up" changeLabel="+ 100% vs last month" changeColor="text-emerald-600" />
+        <StatCard title="Total Revenue" value={stats?.totalRevenue} prefix={ORG.currencySymbol} color={CHART_COLORS.success} />
+        <StatCard title="Influencer Payouts" value={stats?.influencerPayouts} prefix={ORG.currencySymbol} color={CHART_COLORS.danger} />
+        <StatCard title="Subscriptions" value={stats?.subscriptions} prefix={ORG.currencySymbol} color={CHART_COLORS.success} />
       </div>
 
       <div className="flex gap-4 mb-8 flex-wrap">
-        <StatCard title="Single Sales" value={stats?.singleSales ?? 0} prefix={ORG.currencySymbol} color={CHART_COLORS.danger} trend="down" />
-        <StatCard title="Net Revenue" value={stats?.netRevenue ?? 0} prefix={ORG.currencySymbol} color={CHART_COLORS.success} trend="up" />
+        <StatCard title="Single Sales" value={stats?.singleSales} prefix={ORG.currencySymbol} color={CHART_COLORS.danger} />
+        <StatCard title="Net Revenue" value={stats?.netRevenue} prefix={ORG.currencySymbol} color={CHART_COLORS.success} />
       </div>
 
       <div className="mb-8"><PaymentsChart /></div>

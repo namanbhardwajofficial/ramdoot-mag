@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useFilterRefetch from '@/hooks/useFilterRefetch';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
@@ -44,8 +45,8 @@ export default function InfluencerCampaigns() {
   const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
 
   useEffect(() => { init(); }, [init]);
-  useEffect(() => { if (!loading) fetchInfluencers({ status: statusFilter, search }); }, [statusFilter, search, loading, fetchInfluencers]);
-  useEffect(() => { if (!loading) fetchCampaigns({ status: campStatusFilter, search: campSearch }); }, [campStatusFilter, campSearch, loading, fetchCampaigns]);
+  useFilterRefetch(fetchInfluencers, { status: statusFilter, search }, !loading);
+  useFilterRefetch(fetchCampaigns, { status: campStatusFilter, search: campSearch }, !loading);
 
   function openInfluencer(inf) {
     setSelectedInfluencer(inf);

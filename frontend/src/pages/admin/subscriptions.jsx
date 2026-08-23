@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useFilterRefetch from '@/hooks/useFilterRefetch';
 import StatCard from '@/components/ui/stat-card';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
@@ -61,7 +62,7 @@ export default function Subscriptions() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { init(); }, [init]);
-  useEffect(() => { if (!loading) fetchAll({ status: statusFilter, search }); }, [statusFilter, search, loading, fetchAll]);
+  useFilterRefetch(fetchAll, { status: statusFilter, search }, !loading);
 
   async function handleCreate(form) {
     try {
@@ -138,9 +139,9 @@ export default function Subscriptions() {
       </header>
 
       <div className="flex gap-4 mb-8 flex-wrap">
-        <StatCard title="Active Subscribers" value={stats.activeSubscribers} color={CHART_COLORS.success} trend="up" />
-        <StatCard title="New Subscriptions" value={stats.newSubscriptions} color={CHART_COLORS.danger} trend="down" />
-        <StatCard title="Cancellations" value={stats.cancellations} color={CHART_COLORS.success} trend="up" />
+        <StatCard title="Active Subscribers" value={stats?.activeSubscribers} color={CHART_COLORS.success} />
+        <StatCard title="New Subscriptions" value={stats?.newSubscriptions} color={CHART_COLORS.danger} />
+        <StatCard title="Cancellations" value={stats?.cancellations} color={CHART_COLORS.success} />
       </div>
 
       <section>
