@@ -56,7 +56,7 @@ Two real bugs surfaced while doing this:
 Verified end to end: submitting the Add User form with an existing address now
 shows *"Email already registered"*; before, the modal just sat there.
 
-**Data loads — admin done, 28 remaining.** These need a different treatment:
+**Data loads — admin done, 24 remaining.** These need a different treatment:
 an inline error with a retry action, not a toast, because they fire on mount
 and a toast on page load is noise.
 
@@ -72,14 +72,33 @@ failure and every card read `stats?.x ?? 0`, so an outage rendered a confident
 is unknown. Verified by pointing `VITE_BACKEND_URL` at a closed port: all five
 cards show `—` and the table shows *"Couldn't load this / Try again"*.
 
-**Remaining 28**, all page-local fetches that never reach a hook: the admin
-dashboard (4), influencer pages (`Campaigns`, `Earnings` ×3,
-`InfluencerDashboard` ×3, `CampaignDetails`, `RequestPayout` ×2,
-`RequestedPayout`), user pages (`Home`, `Magazines`, `Subscriptions`),
-settings panels (`BillingsPanel` ×2, both `MyDetailsPanel`), the notification
-bell (2), `PaymentsChart`, `CampaignDetailsDrawer`, `InfluencerDetail` and
-`useSecurity.loadDevices`. Each needs local `error` state — they fetch
-directly rather than through a hook.
+**Admin dashboard — done.** Its four loaders (`/admin/dashboard`,
+`/admin/analytics/dashboard`, `/admin/audit-logs`, magazines) now each own an
+error key, so a failed audit log no longer blanks the stat cards, and every
+one of the five sections gets its own retry. Verified against a dead backend:
+all five show *"Couldn't load this / Try again"*, and clicking all five fires
+exactly five new requests.
+
+Three defects came out of that page:
+
+- **The "Recent Payment Deposits" list was entirely fabricated** —
+  `[1,2,3,4].map()` over hardcoded "Visa ending in 1234 / Expiry 06/2025 /
+  +₹ 49" rows. The real `recentPayments` were already in the
+  `/admin/dashboard` response the page had fetched, and were being discarded.
+  It now renders them (payer, description, amount, timestamp).
+- Audit rows rendered `l.entityType`, but the API returns `l.entity`, so the
+  entity label was always blank. Now shows `· user`, `· magazine`, `· system`.
+- Every magazine row displayed a green dot and the word "Live" regardless of
+  status. It now reads the row's real status (Draft / Scheduled / Live).
+
+**Remaining 24**, all page-local fetches that never reach a hook: influencer
+pages (`Campaigns`, `Earnings` ×3, `InfluencerDashboard` ×3,
+`CampaignDetails`, `RequestPayout` ×2, `RequestedPayout`), user pages
+(`Home`, `Magazines`, `Subscriptions`), settings panels (`BillingsPanel` ×2,
+both `MyDetailsPanel`), the notification bell (2), `PaymentsChart`,
+`CampaignDetailsDrawer`, `InfluencerDetail` and `useSecurity.loadDevices`.
+Each needs local `error` state — they fetch directly rather than through a
+hook.
 
 ### 1.2b Fabricated trend lines — **done**
 
