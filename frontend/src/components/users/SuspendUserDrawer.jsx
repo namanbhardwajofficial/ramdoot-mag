@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toastError } from '@/lib/confirm';
 
 const DURATIONS = ['1 Day', '3 Days', '7 Days', '14 Days', '30 Days'];
 const REASONS = [
@@ -34,7 +35,7 @@ export default function SuspendUserDrawer({ open, user, action = 'suspended', on
       await onConfirm({ status: action, duration, reason, note });
       setDone(true);
     } catch (err) {
-      console.error('Failed to deactivate user', err);
+      toastError(err.message || 'Could not update this user');
     } finally {
       setSubmitting(false);
     }

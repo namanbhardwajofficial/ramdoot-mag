@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BellIcon, InfoIcon, XIcon } from '@/components/ui/icons';
 import Drawer from '@/components/ui/drawer';
 import { notificationsApi, listOf } from '@/lib/api';
+import { toastError } from '@/lib/confirm';
 
 /**
  * Bell button with an unread dot that opens a right-side Notifications drawer.
@@ -58,20 +59,26 @@ export default function NotificationBell({ className = '' }) {
     try {
       await notificationsApi.markAllRead();
     } catch (err) {
-      console.warn('markAllRead', err.message);
       setItems(prevItems);
       setUnread(prevUnread);
+      toastError(err.message || 'Could not mark notifications as read');
     }
   };
 
   const dismiss = async (id) => {
+    const prevItems = items;
+    const prevUnread = unread;
     const item = items.find((n) => n.id === id);
     setItems((prev) => prev.filter((n) => n.id !== id));
     if (item && !item.isRead) setUnread((u) => Math.max(0, u - 1));
     try {
       await notificationsApi.markRead(id);
     } catch (err) {
-      console.warn('markRead', err.message);
+      // Put it back: without this the row vanishes from the drawer while the
+      // notification is still unread on the server.
+      setItems(prevItems);
+      setUnread(prevUnread);
+      toastError(err.message || 'Could not dismiss notification');
     }
   };
 

@@ -8,7 +8,7 @@ import AddUserModal from '@/components/users/AddUserModal';
 import UserDetailView from '@/components/users/UserDetailView';
 import UserEditView from '@/components/users/UserEditView';
 import useUsers from '@/hooks/useUsers';
-import { confirmDelete, toastSuccess } from '@/lib/confirm';
+import { confirmDelete, toastSuccess, toastError } from '@/lib/confirm';
 import { ORG, USER_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
@@ -51,7 +51,11 @@ export default function Users() {
     try {
       await createUser(form);
       setShowAddModal(false);
-    } catch (err) { console.error('Failed to add user', err); }
+      toastSuccess('User invited');
+    } catch (err) {
+      // Leave the modal open so the entered details aren't lost.
+      toastError(err.message || 'Could not add user');
+    }
   }
 
   async function handleDelete(id) {
@@ -60,7 +64,9 @@ export default function Users() {
     try {
       await removeUser(id);
       toastSuccess('User deleted');
-    } catch (err) { console.error('Failed to delete', err); }
+    } catch (err) {
+      toastError(err.message || 'Could not delete user');
+    }
   }
 
   // Show the list row immediately, then swap in the fuller record (plan,

@@ -1,9 +1,15 @@
 import Drawer from '@/components/ui/drawer';
 import StatusBadge from '@/components/ui/status-badge';
 import { ORG } from '@/config/constants';
+import { toastSuccess, toastError } from '@/lib/confirm';
 
 function CopyField({ label, value }) {
-  function handleCopy() { navigator.clipboard.writeText(value).catch(console.error); }
+  function handleCopy() {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => toastSuccess('Copied'))
+      .catch(() => toastError('Could not copy to clipboard'));
+  }
   return (
     <div>
       <label className="block text-xs text-slate-400 mb-1">{label}</label>

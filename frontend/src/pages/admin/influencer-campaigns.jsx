@@ -4,6 +4,7 @@ import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
 import { EyeIcon, TrashIcon, PenIcon, ChevronRightIcon } from '@/components/ui/icons';
 import PlatformBadge from '@/components/influencers/PlatformBadge';
+import { toastSuccess, toastError } from '@/lib/confirm';
 import InfluencerDetail from '@/components/influencers/InfluencerDetail';
 import CampaignDetailsDrawer from '@/components/influencers/CampaignDetailsDrawer';
 import useInfluencers from '@/hooks/useInfluencers';
@@ -52,7 +53,12 @@ export default function InfluencerCampaigns() {
   }
 
   async function handleRestrict(id) {
-    try { await restrictInfluencer(id); } catch (err) { console.error('Failed to restrict', err); }
+    try {
+      await restrictInfluencer(id);
+      toastSuccess('Influencer restricted');
+    } catch (err) {
+      toastError(err.message || 'Could not restrict influencer');
+    }
   }
 
   const influencerColumns = [

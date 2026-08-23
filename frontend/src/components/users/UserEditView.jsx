@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import StatusBadge from '@/components/ui/status-badge';
 import SuspendUserDrawer from '@/components/users/SuspendUserDrawer';
+import { toastError } from '@/lib/confirm';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -69,7 +70,7 @@ export default function UserEditView({ user, updateUser, suspendUser, onCancel, 
       const updated = await updateUser(user.id, form);
       onSaved(updated);
     } catch (err) {
-      console.error('Failed to update user', err);
+      toastError(err.message || 'Could not save changes');
     } finally {
       setSaving(false);
     }

@@ -75,8 +75,7 @@ export default function Publications() {
       setSuccessModal(pub.shareLink);
       setView(VIEWS.DASHBOARD);
     } catch (err) {
-      console.error("Failed to publish", err);
-      toastError(err.message || "Failed to publish magazine");
+      toastError(err.message || "Could not publish magazine");
     }
   }
 
@@ -88,7 +87,7 @@ export default function Publications() {
       setSelectedPub(null);
       toastSuccess("Magazine deleted..");
     } catch (err) {
-      console.error("Failed to delete", err);
+      toastError(err.message || "Could not delete magazine");
     }
   }
 
@@ -97,7 +96,7 @@ export default function Publications() {
     try {
       await deactivate(selectedPub.id);
     } catch (err) {
-      console.error("Failed to deactivate", err);
+      toastError(err.message || "Could not deactivate magazine");
     }
   }
 
@@ -107,7 +106,7 @@ export default function Publications() {
       await update(editPub.id, form);
       setEditSuccess(true);
     } catch (err) {
-      console.error("Failed to update", err);
+      toastError(err.message || "Could not update magazine");
     }
   }
 

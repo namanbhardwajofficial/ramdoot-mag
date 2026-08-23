@@ -7,7 +7,7 @@ import Modal from '@/components/ui/modal';
 import EditSubscriptionDrawer from '@/components/subscriptions/EditSubscriptionDrawer';
 import { EyeIcon, TrashIcon, PenIcon } from '@/components/ui/icons';
 import useSubscriptions from '@/hooks/useSubscriptions';
-import { confirmDelete, toastSuccess } from '@/lib/confirm';
+import { confirmDelete, toastSuccess, toastError } from '@/lib/confirm';
 import { ORG, SUBSCRIPTION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
@@ -67,7 +67,11 @@ export default function Subscriptions() {
     try {
       await create(form);
       setShowModal(false);
-    } catch (err) { console.error('Failed to create subscription', err); }
+      toastSuccess('Plan created');
+    } catch (err) {
+      // Leave the modal open so the entered details aren't lost.
+      toastError(err.message || 'Could not create plan');
+    }
   }
 
   async function handleDelete(id) {
@@ -76,11 +80,17 @@ export default function Subscriptions() {
     try {
       await remove(id);
       toastSuccess('Subscription deleted');
-    } catch (err) { console.error('Failed to delete', err); }
+    } catch (err) {
+      toastError(err.message || 'Could not delete subscription');
+    }
   }
 
   async function handleToggle(sub) {
-    try { await toggleStatus(sub); } catch (err) { console.error('Failed to toggle status', err); }
+    try {
+      await toggleStatus(sub);
+    } catch (err) {
+      toastError(err.message || 'Could not change plan status');
+    }
   }
 
   async function handleUpdate(form) {
@@ -91,7 +101,7 @@ export default function Subscriptions() {
       toastSuccess('Subscription updated');
       setEditing(null);
     } catch (err) {
-      console.error('Failed to update subscription', err);
+      toastError(err.message || 'Could not update subscription');
     } finally {
       setSaving(false);
     }
