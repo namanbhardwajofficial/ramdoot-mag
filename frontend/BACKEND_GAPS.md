@@ -12,6 +12,84 @@ envelope the rest of the API already uses.
 
 ---
 
+## Verification of the 2026-08-23 fixes
+
+All five were tested against the deployed backend at `13.204.191.64:3000`, not
+read from the changelog. Note the local `../backend` checkout is still on
+`a7934d3` and has none of this code — the deploy is ahead of the repo.
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| `POST /auth/resend-otp`, 60s limit | **Works** | 1st call proceeds, 2nd and 3rd return `429 "Please wait 60 seconds before requesting a new OTP"` |
+| 2FA Base32 + verify before enable | **Works** | `/2fa/generate` returns a 32-char `A-Z2-7` secret, e.g. `XLFZ…VY4S` (was 40-char hex). `/2fa/enable` with `000000` -> `400 "Invalid 2FA token"`, account untouched |
+| 2FA enforced on login | **Unverified** | `LoginDto` now carries `totpToken`, but proving enforcement means enabling 2FA on a live account — say the word and I will, or test it on a throwaway user |
+| Device sessions with IP + UA | **Works** | Login with `User-Agent: ClaudeVerify/1.0` produced a row with that UA and `ipAddress: ::ffff:103.127.225.150`. Previously always empty |
+| Magazine uploads + read endpoint | **Works** | `POST /magazines/{id}/upload` responds `400 "No files uploaded"` when empty; `GET /magazines/{id}/read` responds `400 "This magazine has no PDF uploaded yet"`. Full round trip not run — see #14 |
+| `GET /admin/analytics/revenue` | **Works** | Returns `{granularity, days, data:[{period, revenue, transactions}]}`. Now driving the real dashboard chart |
+
+Resolved by these: **#2** (2FA), **#2b** (device sessions), **#12** (resend OTP),
+**#13** (time series). The 2FA panels stay behind their feature flag until
+enforcement on login is confirmed and the login form has a TOTP field — see
+`FRONTEND_PROGRESS.md` §1.4.
+
+### 🔴 14. OTP email cannot be sent at all — the whole flow is still dead
+
+The resend endpoint is correct, but the mailer behind it is not configured:
+
+```
+POST /api/v1/auth/resend-otp  {"email":"priya@example.com","purpose":"PASSWORD_RESET"}
+-> 500 {"success":false,"message":"Email service is not configured. Contact support."}
+```
+
+So signup verification and password reset still cannot complete on the deployed
+environment, regardless of the resend fix. This is config, not code — but until
+SMTP (or SES/SendGrid) credentials are set, no user can register or recover an
+account. Please confirm whether prod has them and staging simply does not.
+
+Two smaller things from the same test:
+
+- **The 60s window starts even when the send fails.** Call 1 above errored 500,
+  and calls 2 and 3 were still rate-limited. A failed send should not consume
+  the user's next attempt.
+- **The 429 body is labelled `"code": "INTERNAL_ERROR"`.** The message is right,
+  the code is misleading — worth `RATE_LIMITED` or similar if clients branch on it.
+
+### 🟠 15. The revenue time-series omits empty periods
+
+`?granularity=month&days=365` returns **one** bucket when only one month had
+payments, rather than 12 with zeros:
+
+```
+{"granularity":"month","days":365,"data":[{"period":"2026-08-01T00:00:00.000Z","revenue":1448,"transactions":2}]}
+```
+
+Charted as-is that draws a flat line and implies the other eleven months do not
+exist rather than that they earned nothing. We zero-fill client-side in
+`src/lib/series.js`, so **nothing is blocked** — but every consumer will have to
+repeat that. Emitting the full window would be a better default.
+
+### 🟠 16. Still no platform-wide payments list (this is #4, restated)
+
+Now more visible: `/admin/analytics/revenue` reports platform revenue of ₹1,448,
+while `/payments/me` — the only payments list — returns the *admin's own*
+payments. So `/admin/payments` showed "Total Revenue ₹0" directly above a chart
+reading ₹1,448.
+
+Total Revenue now comes from `/admin/analytics/dashboard`. But **Influencer
+Payouts, Subscriptions, Single Sales and Net Revenue have no platform-wide
+source at all**, so those four cards now render "—" rather than a fabricated ₹0.
+They need either an admin-scoped payments list or aggregates:
+
+```
+GET /admin/payments?status=&from=&to=   -> the platform's payments, paginated
+GET /admin/analytics/revenue-breakdown  -> { subscriptions, singleSales, payoutsPaid }
+```
+
+`/admin/analytics/dashboard` exposes `revenue.pendingPayouts` (₹109), but that is
+*pending*, not paid — labelling it "Influencer Payouts" would misstate it, so we
+left it out.
+
+---
 ## 0. Heads-up: `a7934d3` was a breaking change for us
 
 You changed the global prefix:

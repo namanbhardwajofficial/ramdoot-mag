@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { paymentsApi, earningsApi, listOf, lc } from '@/lib/api';
+import { paymentsApi, earningsApi, adminApi, listOf, lc } from '@/lib/api';
 
 // NOTE: the backend exposes only the *current user's* payments (/payments/me)
 // and payouts (/earnings/payouts) — there is no admin-wide list yet, so for an
@@ -53,21 +53,36 @@ export default function usePayments() {
   // whole account while the table is filtered down.
   const [paymentTotals, setPaymentTotals] = useState(null);
   const [payoutTotals, setPayoutTotals] = useState(null);
+  // Platform-wide figures. /payments/me and /earnings/payouts are both
+  // caller-scoped, so for an admin they describe that admin's own account, not
+  // the platform — which is why "Total Revenue" read ₹0 next to a chart showing
+  // ₹1,448. /admin/analytics/dashboard is the only platform-wide source.
+  const [platform, setPlatform] = useState(null);
 
-  // Null until something loads, so the cards can show "—" rather than claiming
-  // a real ₹0 when the request failed.
+  // Undefined (not 0) for anything with no real source, so the card shows "—"
+  // instead of asserting a figure nothing computed.
   const stats = useMemo(() => {
-    if (!paymentTotals && !payoutTotals) return null;
-    const revenue = paymentTotals?.totalRevenue ?? 0;
-    const paidOut = payoutTotals?.influencerPayouts ?? 0;
+    if (!paymentTotals && !payoutTotals && !platform) return null;
     return {
-      totalRevenue: revenue,
-      subscriptions: paymentTotals?.subscriptions ?? 0,
-      singleSales: paymentTotals?.singleSales ?? 0,
-      influencerPayouts: paidOut,
-      netRevenue: revenue - paidOut,
+      totalRevenue: platform?.revenue?.total ?? paymentTotals?.totalRevenue,
+      // No platform-wide payments list exists yet, so there is no way to split
+      // revenue by relatedType or to total what has actually been paid out
+      // across all influencers. See BACKEND_GAPS.md #4.
+      subscriptions: undefined,
+      singleSales: undefined,
+      influencerPayouts: undefined,
+      netRevenue: undefined,
     };
-  }, [paymentTotals, payoutTotals]);
+  }, [paymentTotals, payoutTotals, platform]);
+
+  const fetchPlatformTotals = useCallback(async () => {
+    try {
+      setPlatform(await adminApi.analytics());
+    } catch (err) {
+      setPlatform(null);
+      setError((prev) => prev || err.message || 'Could not load revenue totals');
+    }
+  }, []);
 
   const fetchPayments = useCallback(async (filters = {}) => {
     try {
@@ -95,9 +110,9 @@ export default function usePayments() {
 
   const init = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchPayments(), fetchPayouts()]);
+    await Promise.all([fetchPayments(), fetchPayouts(), fetchPlatformTotals()]);
     setLoading(false);
-  }, [fetchPayments, fetchPayouts]);
+  }, [fetchPayments, fetchPayouts, fetchPlatformTotals]);
 
   // No retry/refund endpoints yet — refresh so the UI stays consistent.
   const retryPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);

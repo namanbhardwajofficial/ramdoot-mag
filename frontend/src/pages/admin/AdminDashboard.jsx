@@ -6,6 +6,8 @@ import { CHART_COLORS } from '@/config/theme';
 import { ORG } from '@/config/constants';
 import Button from "@/components/Button.jsx";
 import { adminApi, magazinesApi, listOf } from '@/lib/api';
+import { fillSeries, seriesValues } from '@/lib/series';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
 
@@ -26,6 +28,7 @@ export default function AdminDashboard() {
   const [magRows, setMagRows] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [revenue, setRevenue] = useState(null);
 
   // One key per region, so a failure in the audit log doesn't blank the stat
   // cards. Each loader clears its own key on success and doubles as its
@@ -90,6 +93,22 @@ export default function AdminDashboard() {
     }
   }, [mark]);
 
+  // Monthly revenue for the last year. The endpoint omits months with no
+  // payments, so fillSeries pads them back to 0 — otherwise a single paid month
+  // would plot as a flat line implying the rest never happened.
+  const loadRevenue = useCallback(async () => {
+    try {
+      const res = await adminApi.revenueSeries({ granularity: 'month', days: 365 });
+      if (!alive.current) return;
+      setRevenue(res);
+      mark('revenue', null);
+    } catch (err) {
+      if (!alive.current) return;
+      setRevenue(null);
+      mark('revenue', err);
+    }
+  }, [mark]);
+
   const loadMagazines = useCallback(async () => {
     try {
       const mags = listOf(await magazinesApi.list({ limit: 5 })).map((m) => ({
@@ -119,10 +138,24 @@ export default function AdminDashboard() {
     loadAnalytics();
     loadLogs();
     loadMagazines();
+    loadRevenue();
     return () => { alive.current = false; };
-  }, [loadDashboard, loadAnalytics, loadLogs, loadMagazines]);
+  }, [loadDashboard, loadAnalytics, loadLogs, loadMagazines, loadRevenue]);
 
   const overview = analytics?.overview;
+
+  // Same source, two shapes: labelled points for the chart, bare values for the
+  // stat card's sparkline.
+  const revenuePoints = revenue
+    ? fillSeries(revenue, 'revenue').map((p) => ({
+        month: new Date(`${p.key}-01T00:00:00Z`).toLocaleDateString('en-IN', {
+          month: 'short',
+          timeZone: 'UTC',
+        }),
+        revenue: p.value,
+      }))
+    : [];
+  const revenueSpark = revenue ? seriesValues(revenue, 'revenue') : undefined;
 
   // Magazines Table Columns - Matching your user list style
   const magazineColumns = [
@@ -172,7 +205,7 @@ export default function AdminDashboard() {
         <ErrorState message={errors.dashboard} onRetry={loadDashboard} className="mb-6" />
       )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Total Revenue" value={counts ? inr(counts.revenueYTD) : undefined} color={CHART_COLORS.success} />
+        <StatCard title="Total Revenue" value={counts ? inr(counts.revenueYTD) : undefined} color={CHART_COLORS.success} series={revenueSpark} />
         <StatCard title="Active Subscriptions" value={counts ? counts.activeSubscriptions : undefined} color={CHART_COLORS.success} />
         <div className="bg-white rounded-xl border border-slate-200 p-5">
            <div className="flex items-center justify-between mb-1">
@@ -189,20 +222,55 @@ export default function AdminDashboard() {
       {/* 4. Influencer Campaigns (Chart Section) */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-semibold text-slate-900 text-lg">Influencers Campaigns</h2>
+          <h2 className="font-semibold text-slate-900 text-lg">Revenue</h2>
           <div className="flex items-center gap-3">
-             <select className="text-xs border border-slate-200 rounded-md px-2 py-1.5 outline-none">
-                <option>Revenue</option>
-             </select>
+             <span className="text-xs text-slate-400">Last 12 months</span>
              <Button text="Create Campaigns" variant="primary" />
           </div>
         </div>
-        {/* No revenue time series exists yet: GET /admin/analytics/dashboard
-            returns only { total, thisMonth, pendingPayouts }. This used to draw
-            a hardcoded curve, which read as real reporting. */}
-        <div className="h-75 w-full flex items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400">
-          Campaign revenue over time isn&apos;t available yet.
-        </div>
+        {/* Real monthly revenue from GET /admin/analytics/revenue. Before that
+            endpoint existed this panel was a placeholder, and before that a
+            hardcoded curve that read as real reporting. */}
+        {errors.revenue ? (
+          <ErrorState message={errors.revenue} onRetry={loadRevenue} />
+        ) : !revenue ? (
+          <div className="h-75 w-full flex items-center justify-center text-sm text-slate-400">
+            Loading revenue&hellip;
+          </div>
+        ) : (
+          <div className="h-75 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenuePoints} margin={{ top: 5, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="adminRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  width={64}
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  tickFormatter={(v) => `${ORG.currencySymbol}${Number(v).toLocaleString('en-IN')}`}
+                />
+                <Tooltip
+                  formatter={(v) => [inr(v), 'Revenue']}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke={CHART_COLORS.success}
+                  strokeWidth={2}
+                  fill="url(#adminRevenueFill)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* 5. Bottom Row: Users Circle & Recent Payments */}

@@ -106,10 +106,28 @@ hook.
 29 cards. It was not data. "Churned Users 0" came with a falling red line, and
 with the backend dead a card showed **0 beside a climbing green curve**.
 
-It now plots a `series` and renders nothing without one. No endpoint returns
-per-period history (see `BACKEND_GAPS.md` §13), so the cards currently render
-without a chart; wiring is trivial once a series exists. The 20 dead `trend`
+It now plots a `series` and renders nothing without one. The 20 dead `trend`
 props are gone.
+
+**Now wired to real data.** The backend shipped
+`GET /admin/analytics/revenue`, so the Total Revenue sparkline plots actual
+monthly revenue. The endpoint returns only periods that had payments, so
+`src/lib/series.js` zero-fills the window first — otherwise one paid month
+would draw as a flat line implying the other eleven never happened. 13 unit
+checks cover it against the real payload shape.
+
+The same data replaced two placeholders:
+
+- The admin dashboard panel reading *"Campaign revenue over time isn't
+  available yet"* is now a real 12-month revenue chart (₹0 through Jul,
+  ₹1,448 in Aug).
+- `PaymentsChart` filtered on `status === 'COMPLETED'`, but the backend enum
+  is `SUCCESS` — **the filter never matched, so that chart had always drawn a
+  flat zero line** regardless of payments. It now reads the revenue endpoint.
+  Its y-axis also formatted every tick as `(v/1000).toFixed(0)+'k'`, printing
+  "0k, 0k, 0k, 0k, 0k" for any revenue under ₹1,500; it now shows ₹0 / ₹362 /
+  ₹724 / ₹1.1k / ₹1.4k. Its "Payout" series is gone — nothing exposes payouts
+  per period, and drawing it flat at zero asserted none had been paid.
 
 Two related fixes in the same pass:
 
@@ -119,6 +137,42 @@ Two related fixes in the same pass:
   now derived from real payments and payouts.
 - Hardcoded `changeLabel="+ 100% vs last month"` growth claims removed from
   the payments and publications cards — nothing computed them.
+
+### 1.2d Magazine upload posted to a path that does not exist — **fixed**
+
+`magazinesApi.upload` POSTed to `/magazines/upload` with the id in the form
+body. The route is `POST /magazines/{id}/upload` — the old path returns **404**,
+confirmed against the deployed backend. `usePublications.publish()` calls it, so
+**publishing a magazine with a PDF has been failing all along**, which is why
+every magazine in the database has no file attached and
+`GET /magazines/{id}/read` answers "This magazine has no PDF uploaded yet" for
+all four.
+
+Fixed, and `magazinesApi.read(id)` added for the reader. The upload -> read
+round trip is **not yet verified end to end** — that means writing a real PDF to
+the shared deployed server, which I have not done without asking.
+
+### 1.4b What the 2026-08-23 backend fixes unblock
+
+Verified working (see `BACKEND_GAPS.md` "Verification of the 2026-08-23
+fixes"): resend-OTP with a 60s limit, Base32 2FA secrets that verify before
+enabling, device sessions with IP and user-agent, magazine upload/read, and the
+revenue time-series.
+
+Frontend work these open up, none of it done yet:
+
+1. **A "Resend code" button** on the signup and password-reset OTP screens,
+   with a 60s countdown to match the server. Blocked in practice: the deployed
+   mailer is unconfigured and returns *"Email service is not configured"*, so no
+   OTP can be delivered at all (`BACKEND_GAPS.md` #14).
+2. **Turn the 2FA panels back on.** Do NOT flip `TWO_FACTOR_ENABLED` on its own
+   — `authApi.login` does not send `totpToken`, so the first user to enable 2FA
+   locks themselves out of the frontend. The login form needs a TOTP step first,
+   and enforcement on login still needs confirming.
+3. **A magazine reader** using `GET /magazines/{id}/read`, which also increments
+   `readsCount`. Needs at least one magazine with a PDF, which §1.2d unblocks.
+4. **Device sessions** now return real rows, so the security panel's device list
+   should be re-checked against live data rather than an always-empty list.
 
 ### 1.2c Duplicate requests on every admin page — **done**
 

@@ -166,12 +166,17 @@ export const magazinesApi = {
   update: (id, body) => request(`/magazines/${id}`, { method: 'PATCH', body }),
   publish: (id, body = {}) => request(`/magazines/${id}/publish`, { method: 'POST', body }),
   // Multipart upload of a cover image and/or PDF for an existing magazine.
+  // The id goes in the path — POSTing to /magazines/upload with the id in the
+  // body 404s, which is why publishing with a PDF used to fail silently and
+  // every magazine ended up with no file attached.
   upload: (magazineId, files) => {
     const fd = new FormData();
-    fd.append('magazineId', magazineId);
     (Array.isArray(files) ? files : [files]).filter(Boolean).forEach((f) => fd.append('files', f));
-    return request('/magazines/upload', { method: 'POST', body: fd });
+    return request(`/magazines/${magazineId}/upload`, { method: 'POST', body: fd });
   },
+  // Resolves the PDF URL for the reader and increments readsCount server-side.
+  // 400s with "This magazine has no PDF uploaded yet" when there is no file.
+  read: (id) => request(`/magazines/${id}/read`),
 };
 
 // Neutral cover used when a magazine has no uploaded image (e.g. seeded data).
@@ -297,6 +302,11 @@ export const adminApi = {
   auditLogs: (params = {}) => request(`/admin/audit-logs${qs(params)}`),
   influencers: () => request('/admin/influencers'),
   analytics: () => request('/admin/analytics/dashboard'),
+  // { granularity, days, data: [{ period, revenue, transactions }] }.
+  // Only periods that had payments come back — see fillSeries() for why that
+  // matters before charting it.
+  revenueSeries: ({ granularity = 'day', days = 30 } = {}) =>
+    request(`/admin/analytics/revenue${qs({ granularity, days })}`),
 };
 
 // ---- Notifications ----
