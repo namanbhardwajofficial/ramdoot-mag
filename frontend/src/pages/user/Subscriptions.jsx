@@ -116,6 +116,23 @@ export default function Subscriptions() {
             );
             return;
           }
+
+          // Confirm the payment actually settled before claiming the plan.
+          // Until GET /payments/:id existed this step assumed success, so a
+          // pending or failed row would still have been sent to `purchase`.
+          // Note this endpoint takes our internal id — it does not resolve a
+          // Razorpay provider id, so findPaymentId above is still required.
+          const payment = await paymentsApi.get(paymentId);
+          const paidStatus = String(payment?.status || "").toUpperCase();
+          if (paidStatus !== "SUCCESS") {
+            toastError(
+              paidStatus === "FAILED"
+                ? payment?.failureReason || "That payment failed. You have not been charged."
+                : "Your payment is still being confirmed. This page will show the plan once it clears.",
+            );
+            return;
+          }
+
           await subscriptionsApi.purchase({ planId: plan.id, paymentId });
           await loadMine();
           toastSuccess("Subscription activated");

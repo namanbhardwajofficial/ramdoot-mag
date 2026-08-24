@@ -2,9 +2,21 @@ import { useState, useCallback } from 'react';
 import { magazinesApi, listOf, lc } from '@/lib/api';
 
 // "Publications" in the UI are backed by magazines.
+//
+// GET /magazines began returning `createdBy` as a full user entity rather than a
+// name, which crashed the details drawer ("Objects are not valid as a React
+// child"). Flatten it to a name here so nothing downstream can render the object
+// — and so we never hold the credential fields that response currently carries
+// (see BACKEND_GAPS.md #17: it leaks passwordHash and twoFactorSecret on a
+// public endpoint).
 function mapPub(m) {
+  const { createdBy, ...rest } = m;
   return {
-    ...m,
+    ...rest,
+    createdBy:
+      typeof createdBy === 'string'
+        ? createdBy
+        : createdBy?.fullName || createdBy?.email || '—',
     title: m.title,
     magazineRef: `#${String(m.id).slice(0, 8)}`,
     status: lc(m.status),

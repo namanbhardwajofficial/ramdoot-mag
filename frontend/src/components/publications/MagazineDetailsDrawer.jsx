@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Drawer from '@/components/ui/drawer';
 import StatusBanner from '@/components/ui/status-banner';
 import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
+import { magazinesApi } from '@/lib/api';
+import ErrorState from '@/components/ui/error-state';
 
 // Placeholder for tabs whose backing endpoint doesn't exist yet — better than a
 // spinner that never resolves. See BACKEND_GAPS.md.
@@ -97,55 +99,105 @@ function OverviewTab({ pub }) {
   );
 }
 
-function PerformanceTab() {
-  // No magazine performance endpoint yet (subscriber gain, views, dwell time are
-  // not tracked server-side at all). See BACKEND_GAPS.md.
-  const data = null;
+// One loader for both tabs: its own error, its own retry.
+function useMagazineData(fetcher, id) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await fetcher(id));
+      setError(null);
+    } catch (err) {
+      setData(null);
+      setError(err.message || 'Could not load this');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+  return { data, error, loading, reload: load };
+}
+
+function Tile({ label, value }) {
+  return (
+    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <p className="text-lg font-bold">{value}</p>
+    </div>
+  );
+}
+
+const rupees = (v) => `${ORG.currencySymbol}${Number(v || 0).toLocaleString('en-IN')}`;
+
+/**
+ * GET /magazines/:id/performance.
+ *
+ * The mock wanted subscriber gain over time and average dwell time; the
+ * endpoint reports neither — it reports views, reads and an engagement rate, so
+ * that is what this shows.
+ */
+function PerformanceTab({ magazineId }) {
+  const { data, error, loading, reload } = useMagazineData(magazinesApi.performance, magazineId);
+
+  if (loading) return <div className="py-8 text-center text-sm text-slate-400">Loading&hellip;</div>;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return <NotAvailable what="Performance data" />;
+
   return (
     <>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-semibold">Essential</h3>
-        <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Week</span>
+      <h3 className="text-base font-semibold mb-3">Engagement</h3>
+      <div className="grid grid-cols-2 gap-3">
+        <Tile label="Views" value={Number(data.viewsCount || 0).toLocaleString('en-IN')} />
+        <Tile label="Reads" value={Number(data.readsCount || 0).toLocaleString('en-IN')} />
+        <Tile label="Engagement rate" value={data.engagementRate ?? '—'} />
+        <Tile label="Revenue" value={rupees(data.revenue)} />
       </div>
-      <div className="flex items-center gap-4 text-xs mb-3">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.primary }} />Subscriber Gain</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.success }} />Views</span>
-      </div>
-      <MiniLineChart labels={data.chart.labels} data={data.chart.subscriberGain} color={CHART_COLORS.primary} />
-      <div className="mt-5 bg-slate-50 rounded-lg border border-slate-200 p-4">
-        <p className="text-xs text-slate-400 mb-1">Avg Time per user spend</p>
-        <p className="text-xl font-bold">{data.avgTimePerUser}</p>
-      </div>
+      <p className="mt-4 text-xs text-slate-400">
+        Reads are counted when a subscriber opens the PDF. Views count opens of the
+        magazine page.
+      </p>
     </>
   );
 }
 
-function FinancialsTab() {
-  // No per-magazine financials endpoint yet — payments carry `relatedId` but
-  // there is no aggregate-by-magazine query. See BACKEND_GAPS.md.
-  const data = null;
+/**
+ * GET /magazines/:id/financials.
+ *
+ * `price` comes back as a string ("59.00"), so it is coerced before formatting.
+ */
+function FinancialsTab({ magazineId }) {
+  const { data, error, loading, reload } = useMagazineData(magazinesApi.financials, magazineId);
+
+  if (loading) return <div className="py-8 text-center text-sm text-slate-400">Loading&hellip;</div>;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return <NotAvailable what="Financials" />;
+
+  const byDay = Array.isArray(data.revenueByDay) ? data.revenueByDay : [];
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3 mb-5">
-        {[
-          { label: 'Total Revenue', value: `${ORG.currencySymbol}${data.totalRevenue?.toLocaleString('en-IN')}` },
-          { label: 'Total Clicks', value: data.totalClicks?.toLocaleString('en-IN') },
-          { label: 'Influencer Commission', value: `${ORG.currencySymbol}${data.influencerCommission?.toLocaleString('en-IN')}` },
-          { label: 'Influencer Subscribers', value: data.influencerSubscribers?.toLocaleString('en-IN') },
-        ].map((s) => (
-          <div key={s.label} className="bg-slate-50 rounded-lg border border-slate-200 p-3">
-            <p className="text-xs text-slate-400 mb-1">{s.label}</p>
-            <p className="text-lg font-bold">{s.value}</p>
-          </div>
-        ))}
+        <Tile label="Total Revenue" value={rupees(data.totalRevenue)} />
+        <Tile label="Total Sales" value={Number(data.totalSales || 0).toLocaleString('en-IN')} />
+        <Tile label="Cover Price" value={rupees(data.price)} />
       </div>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-semibold">Revenue</h3>
-        <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Week</span>
-      </div>
-      <MiniLineChart labels={data.labels} data={data.revenueChart} color={CHART_COLORS.primary} />
+      <h3 className="text-base font-semibold mb-2">Revenue</h3>
+      {byDay.length > 1 ? (
+        <MiniLineChart
+          labels={byDay.map((d) => d.date ?? d.period)}
+          data={byDay.map((d) => Number(d.revenue ?? d.amount ?? 0))}
+          color={CHART_COLORS.primary}
+        />
+      ) : (
+        <p className="py-6 text-center text-sm text-slate-400">
+          No sales recorded for this magazine yet
+        </p>
+      )}
     </>
   );
 }
@@ -201,8 +253,8 @@ export default function MagazineDetailsDrawer({ open, publication, onClose, onDe
   function renderTab() {
     switch (tab) {
       case 'Overview':    return <OverviewTab pub={publication} />;
-      case 'Performance': return <PerformanceTab />;
-      case 'Financials':  return <FinancialsTab />;
+      case 'Performance': return <PerformanceTab magazineId={publication.id} />;
+      case 'Financials':  return <FinancialsTab magazineId={publication.id} />;
       case 'Actions':     return <ActionsTab pub={publication} onDeactivate={onDeactivate} />;
       default:            return null;
     }

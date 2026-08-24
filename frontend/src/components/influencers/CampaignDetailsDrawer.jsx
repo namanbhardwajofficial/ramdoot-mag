@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Drawer from '@/components/ui/drawer';
 import PlatformBadge from './PlatformBadge';
 import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import { campaignsApi } from '@/lib/api';
+import ErrorState from '@/components/ui/error-state';
 
 // Placeholder for figures the backend can't produce yet — see BACKEND_GAPS.md.
 const TBD = '—';
@@ -71,87 +72,76 @@ function MiniLineChart({ data, labels, color = CHART_COLORS.success, height = 80
   return <svg viewBox={`0 0 ${w} ${h}`} className="w-full" fill="none"><path d={d} stroke={color} strokeWidth="1.5" strokeLinecap="round" /></svg>;
 }
 
-// GET /campaigns/:id/overview is the only financial-ish endpoint that exists.
-// It yields commission + a daily series; gross revenue, profit, tax and payout
-// state have no source yet, so those tiles render TBD rather than fake numbers.
-function toFinancials(overview) {
-  const daily = overview?.stats?.daily?.conversions || [];
-  const commission = Number(overview?.stats?.totalCommission || 0);
-  return {
-    influencerCommission: commission,
-    chart: daily.map((d) => d.commission),
-    labels: daily.map((d) => d.date),
-    totalRevenue: null,
-    totalProfit: null,
-    profitMargin: TBD,
-    totalPayable: null,
-    paid: null,
-    taxes: TBD,
-  };
-}
+const money = (v) =>
+  v == null ? TBD : `${ORG.currencySymbol}${Number(v).toLocaleString('en-IN')}`;
 
-const money = (v) => (v == null ? TBD : `${ORG.currencySymbol}${Number(v).toLocaleString('en-IN')}`);
-
+/**
+ * GET /campaigns/:id/financials.
+ *
+ * Replaces a derivation from /campaigns/:id/overview that could only produce
+ * commission — gross revenue, profit, tax and payout state had no source, so
+ * half the tiles rendered a permanent dash. The tiles that still have no source
+ * (profit, margin, tax, payout state) are gone rather than left dashed forever;
+ * what the endpoint does report is shown instead.
+ */
 function FinancialsTab({ campaignId }) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
+  const load = useCallback(async () => {
     setLoading(true);
-    campaignsApi
-      .overview(campaignId)
-      .then((res) => alive && setData(toFinancials(res)))
-      .catch((err) => console.warn('campaignFinancials', err.message))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+    try {
+      setData(await campaignsApi.financials(campaignId));
+      setError(null);
+    } catch (err) {
+      setData(null);
+      setError(err.message || 'Could not load financials');
+    } finally {
+      setLoading(false);
+    }
   }, [campaignId]);
 
-  if (loading) return <div className="text-center py-8 text-slate-400">Loading...</div>;
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <div className="text-center py-8 text-slate-400">Loading&hellip;</div>;
+  if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return <div className="text-center py-8 text-slate-400">Could not load financials.</div>;
+
+  const byDay = Array.isArray(data.revenueByDay) ? data.revenueByDay : [];
+  // The API sends a commission *rate* as a fraction (0.15), not a percentage.
+  const rate = data.commissionRate == null ? null : `${(Number(data.commissionRate) * 100).toFixed(0)}%`;
+
+  const tiles = [
+    ['Influencer Commission', money(data.totalCommission)],
+    ['Commission Rate', rate ?? TBD],
+    ['Conversions', Number(data.totalConversions || 0).toLocaleString('en-IN')],
+    ['Average Order Value', money(data.averageOrderValue)],
+  ];
+
   return (
     <div className="space-y-3">
       <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
         <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
         <p className="text-2xl font-bold">{money(data.totalRevenue)}</p>
-        <MiniLineChart data={data.chart} labels={data.labels} />
+        {byDay.length > 1 ? (
+          <MiniLineChart
+            data={byDay.map((d) => Number(d.revenue ?? d.amount ?? 0))}
+            labels={byDay.map((d) => d.date ?? d.period)}
+          />
+        ) : (
+          <p className="mt-2 text-xs text-slate-400">No day-by-day revenue for this campaign yet</p>
+        )}
       </div>
+
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Total Profit</p>
-          <p className="text-xl font-bold">{money(data.totalProfit)}</p>
-        </div>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Profit Margin</p>
-          <p className="text-xl font-bold">{data.profitMargin}</p>
-        </div>
+        {tiles.map(([label, value]) => (
+          <div key={label} className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+            <p className="text-xs text-slate-400 mb-1">{label}</p>
+            <p className="text-xl font-bold">{value}</p>
+          </div>
+        ))}
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Influencer Commission</p>
-          <p className="text-xl font-bold">{money(data.influencerCommission)}</p>
-        </div>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Total Payable</p>
-          <p className="text-xl font-bold">{money(data.totalPayable)}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Paid</p>
-          <p className="text-xl font-bold">{money(data.paid)}</p>
-        </div>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-400 mb-1">Taxes</p>
-          <p className="text-xl font-bold">{data.taxes}</p>
-        </div>
-      </div>
-      <a href="#" className="block text-sm font-medium text-slate-800 underline underline-offset-2 mt-3">
-        View Influencer Payment History
-        <span className="block text-xs text-slate-400 font-normal no-underline">Click here to see the full payment history of related influencer</span>
-      </a>
     </div>
   );
 }

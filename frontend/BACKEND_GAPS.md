@@ -90,6 +90,72 @@ GET /admin/analytics/revenue-breakdown  -> { subscriptions, singleSales, payouts
 left it out.
 
 ---
+## 17. 🔴 URGENT — `GET /magazines` leaks admin password hashes and 2FA secrets
+
+Introduced by the 2026-08-24 deploy. `GET /api/v1/magazines` is `@Public()`, and
+it now serialises the `createdBy` relation as a full user entity:
+
+```
+$ curl http://13.204.191.64:3000/api/v1/magazines?limit=1     # NO auth header
+
+"createdBy": {
+  "email": "admin@ramdoot.com",
+  "role": "ADMIN",
+  "passwordHash": "$2a$12$26YWzEfuA0hYx...",   <-- bcrypt hash
+  "twoFactorSecret": "XLFZ7R3XRHOU...",        <-- TOTP secret
+  ...
+}
+```
+
+No token required. Anyone who can reach the host can harvest the admin bcrypt
+hash for offline cracking, and the TOTP secret means enabling 2FA would not stop
+them — they can generate valid codes.
+
+**Needed:**
+
+1. Stop serialising those fields — `@Exclude()` on `passwordHash` and
+   `twoFactorSecret` in the User entity, or an explicit `select` on the
+   `createdBy` join. Worth auditing every other endpoint that joins a user;
+   `/admin/payments`, `/admin/payouts` and `/admin/influencers/:id/payments` all
+   nest a `user` object too (those are admin-guarded and currently return only
+   id/fullName/email, but the same relation could widen the same way).
+2. **Rotate the admin password and re-issue the 2FA secret** once fixed. The hash
+   has been publicly served, so treat it as compromised.
+
+Frontend mitigation shipped meanwhile: `usePublications.mapPub` drops the object
+and keeps only a display name, so the app never holds those fields. That limits
+our exposure — it does **not** fix the leak, which is in the response itself.
+
+It also broke the Publications page outright ("Objects are not valid as a React
+child"), because `createdBy` had been a string and became an object.
+
+### 18. 🟠 `GET /payments/:id` 500s on a non-UUID and leaks the DB error
+
+```
+GET /api/v1/payments/pay_test_002
+-> 500 {"message":"invalid input syntax for type uuid: \"pay_test_002\"",
+        "error":{"code":"INTERNAL_ERROR"}}
+```
+
+Should be a `400`, and should not echo the Postgres error. Not blocking — we only
+call it with internal ids — but it is a free bit of database fingerprinting.
+
+Related: the endpoint resolves **our** payment id only, not a Razorpay provider
+id, so it cannot be used to look up a payment straight after checkout. We still
+scan `/payments/me` for a matching `paymentProviderId` first. A
+`?paymentProviderId=` lookup would close that loop properly.
+
+### 19. Still open from the 2026-08-24 batch
+
+- **`influencerId` filter on `/campaigns`** — still rejected:
+  `400 "property influencerId should not exist"`. We continue to fetch 100 rows
+  and filter client-side.
+- **`/magazines/:id/versions`** — ships as a stub: `200` with
+  `{ versions: [], note: "Version history tracking is not yet implemented." }`.
+  Wired anyway, so the tab fills in by itself once it is real. Say if it is not
+  planned and we will drop the tab.
+
+---
 ## 0. Heads-up: `a7934d3` was a breaking change for us
 
 You changed the global prefix:
