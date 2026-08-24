@@ -201,15 +201,18 @@ Both security panels are gated behind `const TWO_FACTOR_ENABLED = false`:
 - `src/components/settings/SecurityPanel.jsx:13`
 - `src/components/user/settings/SecurityPanel.jsx:20`
 
-The wiring is complete and already calls the real endpoints — flip the flag to
-`true` once `BACKEND_GAPS.md` #2 is fixed. The panel subtitle follows the flag,
-so it stays accurate either way.
+**The backend side is now fixed** (verified 2026-08-23): secrets are Base32, and
+`enable` rejects an invalid code instead of storing it as the secret.
 
-Hidden because the current implementation is not functional: `generate2fa`
-returns a 40-char **hex** secret where `otpauth://` requires **Base32** (so
-authenticator apps reject it outright), `enable2fa` stores the submitted code
-*as* the secret and verifies nothing, and login never reads
-`isTwoFactorEnabled`.
+**But do not just flip the flag.** `authApi.login` sends only
+`{ email, password, rememberMe }` — it does not send `totpToken`, which the login
+DTO now accepts. So the first user to enable 2FA **locks themselves out of the
+frontend entirely**. Order of work:
+
+1. Add a TOTP step to the login form and pass `totpToken` through `authApi.login`.
+2. Confirm the backend actually enforces 2FA on login (unverified — proving it
+   means enabling 2FA on a live account).
+3. Only then flip `TWO_FACTOR_ENABLED` in both panels.
 
 ### 1.5 Placeholder tabs — UI to build once the endpoints exist
 
@@ -225,13 +228,11 @@ on a missing endpoint, listed with its `BACKEND_GAPS.md` reference:
 | `MagazineDetailsDrawer.jsx` | Performance | gap #6 |
 | `MagazineDetailsDrawer.jsx` | Financials | gap #7 |
 
-### 1.6 Admin revenue chart is a placeholder
+### 1.6 Admin revenue chart — **done**
 
-`AdminDashboard.jsx` shows "Campaign revenue over time isn't available yet"
-where a chart used to draw a hardcoded curve.
-`GET /admin/analytics/dashboard` returns scalars only
-(`{ total, thisMonth, pendingPayouts }`) — no time series. **Needs a backend
-endpoint** returning revenue bucketed by day/month before the chart can return.
+The backend shipped `GET /admin/analytics/revenue`, so the panel is a real
+12-month chart and the Total Revenue card has a real sparkline. `src/lib/series.js`
+zero-fills the window because the endpoint omits periods with no payments.
 
 ---
 
@@ -254,29 +255,44 @@ also travel in clear today.
 `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are set on the server. The frontend
 flow is finished and fails with a clear error rather than granting anything.
 
-### 2.3 🔴 No magazine files uploaded
+### 2.3 🟠 No magazine files uploaded — cause found and fixed, content still needed
 
-All four magazines have `pdfUrl: null` and `coverImageUrl: null`, so nothing is
-readable and every cover falls back to the placeholder. Content task — the
-upload flow itself works.
+All four magazines have `pdfUrl: null`, so nothing is readable and every cover
+falls back to the placeholder. This was **not** just a content gap: the frontend
+was POSTing to `/magazines/upload` when the route is `/magazines/{id}/upload`,
+which 404s, so **every publish-with-a-PDF silently failed** (§1.2d). Fixed.
 
-### 2.4 🔴 OTP email delivery unverified
+What remains is genuinely a content task — somebody has to upload real PDFs — plus
+one verification: the upload -> read round trip has not been run end to end,
+because that means writing a real file to the shared deployed server.
 
-Deployed `signup/step1` no longer returns the OTP, and `forgot-password` returns
-the generic *"If the email exists, an OTP has been sent"*. If SMTP is not
-configured, **signup and password reset are both silent dead ends**. Confirm
-mail actually sends before launch.
+### 2.4 🔴 OTP email cannot be sent — confirmed, not just suspected
+
+No longer a guess. The deployed mailer is unconfigured:
+
+```
+POST /api/v1/auth/resend-otp  {"email":"priya@example.com","purpose":"PASSWORD_RESET"}
+-> 500 {"message":"Email service is not configured. Contact support."}
+```
+
+**Signup verification and password reset are both dead ends today**, and no amount
+of frontend work changes that. This is config on the EC2 box, not code. It also
+blocks §1.3 (the empty-state pass needs a fresh account) and makes a "Resend code"
+button pointless until it is fixed. See `BACKEND_GAPS.md` #14.
 
 ### 2.5 Other backend gaps
 
 See `BACKEND_GAPS.md`:
 
-- **#2b** — device sessions are never written, so Settings ▸ Security will
-  always read "No active sessions".
-- **#12** — no resend-OTP endpoint, and an abandoned signup permanently locks
-  the email (409 on retry, no password set, no way out). The "Resend
-  Verification Code" control on the signup screen has nothing to call.
 - **#1** — the Razorpay webhook is unauthenticated and mutates payment status.
+  Still open, and still the most serious one: it can be forged to grant free
+  subscriptions.
+- **#16** — no platform-wide payments list, so four cards on `/admin/payments`
+  (Influencer Payouts, Subscriptions, Single Sales, Net Revenue) have no real
+  source and render "—".
+- ~~**#2b** device sessions~~ — **fixed**, verified writing IP and user-agent.
+- ~~**#12** resend-OTP~~ — **endpoint fixed** and rate-limited, but useless until
+  §2.4 (the mailer) is configured.
 
 ---
 
