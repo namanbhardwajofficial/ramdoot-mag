@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import StatusBadge from '@/components/ui/status-badge';
-import StatCard, { MiniChart } from '@/components/ui/stat-card';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
-import { EyeIcon, TrashIcon } from '@/components/ui/icons';
 import { ORG } from '@/config/constants';
-import { CHART_COLORS } from '@/config/theme';
 import useInfluencers from '@/hooks/useInfluencers';
+import ErrorState from '@/components/ui/error-state';
+import { adminApi, listOf } from '@/lib/api';
 
 // Placeholder for tabs whose backing endpoint doesn't exist yet. Better than a
 // spinner that never resolves — see BACKEND_GAPS.md.
@@ -93,136 +92,148 @@ function CampaignsTab({ influencerId }) {
   );
 }
 
-function AudienceTab() {
-  // No GET /influencers/:id/audience on the backend yet (refund rate, paid-vs-free
-  // split, revenue per subscriber are not derivable from anything we can call).
-  const data = null;
-  if (!data) return <NotAvailable what="Audience data" />;
+// Small helper so every tab here loads the same way: one call, its own error,
+// its own retry.
+function useTabData(fetcher, dep) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await fetcher(dep));
+      setError(null);
+    } catch (err) {
+      setData(null);
+      setError(err.message || 'Could not load this');
+    } finally {
+      setLoading(false);
+    }
+    // fetcher is a stable module-level api function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dep]);
+
+  useEffect(() => { load(); }, [load]);
+  return { data, error, loading, reload: load };
+}
+
+function Tile({ label, value }) {
   return (
-    <div className="flex gap-4 flex-wrap">
-      <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium text-slate-700">Refund rate</span>
-          <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
-        </div>
-        <p className="text-3xl font-bold mt-2">{data.refundRate}</p>
-        <MiniChart color={CHART_COLORS.success} />
+    <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[170px]">
+      <p className="text-sm font-medium text-slate-700">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * GET /influencers/:id/audience.
+ *
+ * The mock this replaced showed refund rate, paid-vs-free split and revenue per
+ * subscriber. The endpoint reports none of those — it reports reach and
+ * conversion — so the tab now shows what actually exists rather than keeping
+ * three tiles that could never be filled.
+ */
+function AudienceTab({ influencerId }) {
+  const { data, error, loading, reload } = useTabData(adminApi.influencerAudience, influencerId);
+
+  if (loading) return <div className="py-10 text-center text-sm text-slate-400">Loading&hellip;</div>;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <NotAvailable what="Audience data" />;
+
+  const media = Array.isArray(data.clicksByMedium) ? data.clicksByMedium : [];
+  const peak = Math.max(1, ...media.map((m) => Number(m.count) || 0));
+  const top = Array.isArray(data.topCampaigns) ? data.topCampaigns : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-4">
+        <Tile label="Total clicks" value={Number(data.totalClicks || 0).toLocaleString('en-IN')} />
+        <Tile label="Conversions" value={Number(data.totalConversions || 0).toLocaleString('en-IN')} />
+        <Tile label="Conversion rate" value={data.conversionRate ?? '—'} />
+        <Tile
+          label="Commission earned"
+          value={`${ORG.currencySymbol}${Number(data.totalCommissionEarned || 0).toLocaleString('en-IN')}`}
+        />
+        <Tile label="Active campaigns" value={Number(data.activeCampaigns || 0).toLocaleString('en-IN')} />
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium text-slate-700">Paid vs Free users %</span>
-          <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
-        </div>
-        <div className="flex items-baseline gap-2 mt-2">
-          <p className="text-3xl font-bold">{data.paidVsFree}</p>
-          <span className="text-xs text-emerald-600 font-medium">{data.paidChange}</span>
-        </div>
-        <MiniChart color={CHART_COLORS.success} />
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-slate-800">Where the clicks came from</h3>
+        {media.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">No clicks recorded yet</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {media.map((m) => (
+              <li key={m.medium} className="flex items-center gap-3">
+                <span className="w-24 shrink-0 text-sm capitalize text-slate-600">{m.medium}</span>
+                <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <span
+                    className="block h-full rounded-full bg-emerald-500"
+                    style={{ width: `${((Number(m.count) || 0) / peak) * 100}%` }}
+                  />
+                </span>
+                <span className="w-12 shrink-0 text-right text-sm font-medium text-slate-700">{m.count}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-[200px]">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium text-slate-700">Revenue per sub</span>
-          <span className="text-xs text-slate-400 border border-slate-200 rounded-md px-2 py-0.5">This Month</span>
-        </div>
-        <p className="text-3xl font-bold mt-2">{ORG.currencySymbol}{data.revenuePerSub}</p>
-        <MiniChart color={CHART_COLORS.success} />
+
+      <div>
+        <h3 className="mb-1 text-lg font-semibold">Top campaigns</h3>
+        <p className="mb-4 text-sm text-slate-500">Ranked by clicks</p>
+        <DataTable
+          columns={[
+            { key: 'name', label: 'Campaign' },
+            { key: 'promoCode', label: 'Promo code' },
+            { key: 'status', label: 'Status', render: (v) => <StatusBadge status={String(v || '').toLowerCase()} /> },
+            { key: 'clicks', label: 'Clicks', render: (v) => Number(v || 0).toLocaleString('en-IN') },
+            { key: 'conversions', label: 'Conversions', render: (v) => Number(v || 0).toLocaleString('en-IN') },
+          ]}
+          data={top}
+          emptyMessage="No campaigns yet"
+        />
       </div>
     </div>
   );
 }
 
-function PaymentsTab() {
-  // No GET /influencers/:id/payments on the backend yet — /payments/me is scoped
-  // to the caller, so an admin can't read another user's payment history.
-  const data = null;
-  if (!data) return <NotAvailable what="Influencer payment history" />;
-
-  const historyColumns = [
-    { key: 'campaignName', label: 'Campaign Name' },
-    { key: 'startingDate', label: 'Starting Date', render: (v) => formatDate(v) },
-    { key: 'commissionEarned', label: 'Commission Earned', render: (v) => `${ORG.currencySymbol}${v?.toLocaleString('en-IN')}` },
-    { key: 'totalClicks', label: 'Total Clicks', render: (v) => v?.toLocaleString('en-IN') },
-    { key: 'method', label: 'Method' },
-    { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
-    {
-      key: '_actions', label: '', align: 'right',
-      render: () => (
-        <div className="flex items-center justify-end gap-1">
-          <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"><EyeIcon /></button>
-          <button className="p-1.5 rounded-md hover:bg-red-50 text-slate-500"><TrashIcon /></button>
-        </div>
-      ),
-    },
-  ];
+/**
+ * GET /admin/influencers/:id/payments — rows match /admin/payments.
+ *
+ * The mock this replaced showed a payment model, commission rate, tax status,
+ * next-payout countdown and bank details. None of that is exposed for another
+ * user, so rather than keep tiles that can only ever be blank this is the real
+ * payment history and nothing more.
+ */
+function PaymentsTab({ influencerId }) {
+  const { data, error, loading, reload } = useTabData(adminApi.influencerPayments, influencerId);
+  const rows = data ? listOf(data) : [];
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-1">Payments</h2>
-        <p className="text-sm text-slate-500 mb-4">You will find everything about users in this platform.</p>
-
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {[
-            { label: 'Payment Model', value: data.paymentModel },
-            { label: 'Commission', value: data.commission },
-            { label: 'Currency', value: data.currency },
-            { label: 'Tax Applicable', value: data.taxApplicable },
-          ].map((s) => (
-            <div key={s.label} className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-400 mb-1">{s.label}</p>
-              <p className="text-lg font-bold">{s.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-5 gap-3">
-          {[
-            { label: 'Total Earned', value: `${ORG.currencySymbol}${data.totalEarned?.toLocaleString('en-IN')}` },
-            { label: 'Total Paid', value: `${ORG.currencySymbol}${data.totalPaid?.toLocaleString('en-IN')}` },
-            { label: 'Pending Amount', value: `${ORG.currencySymbol}${data.pendingAmount?.toLocaleString('en-IN')}` },
-            { label: 'Next Payout', value: <><span className="text-2xl font-bold">{data.nextPayout}</span> <span className="text-sm text-slate-500">days</span></> },
-            { label: 'Payment Status', value: <StatusBadge status={data.paymentStatus} /> },
-          ].map((s, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-400 mb-1">{s.label}</p>
-              <div className="text-lg font-bold">{s.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <h2 className="text-lg font-semibold mb-1">Payment History</h2>
-      <p className="text-sm text-slate-500 mb-4">Payouts sent to this influencer</p>
-      <DataTable columns={historyColumns} data={Array.isArray(data.history) ? data.history : []} />
-
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-1">Bank Information</h2>
-        <p className="text-sm text-slate-500 mb-3">The account their payouts are sent to</p>
-        <div className="flex items-center justify-end mb-2">
-          <button className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-full hover:bg-slate-800">
-            Edit
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </div>
-        {data.bankInfo && (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-slate-200 text-xs text-slate-500">
-              <th className="text-left py-2 font-medium">Holder Name</th>
-              <th className="text-left py-2 font-medium">Bank Name</th>
-              <th className="text-left py-2 font-medium">Account Number</th>
-              <th className="text-left py-2 font-medium">IFSC / SWIFT</th>
-              <th className="text-left py-2 font-medium">Location</th>
-            </tr></thead>
-            <tbody><tr className="border-b border-slate-100">
-              <td className="py-3">{data.bankInfo.holderName}</td>
-              <td className="py-3">{data.bankInfo.bankName}</td>
-              <td className="py-3">{data.bankInfo.accountNumber}</td>
-              <td className="py-3">{data.bankInfo.ifsc}</td>
-              <td className="py-3">{data.bankInfo.location}</td>
-            </tr></tbody>
-          </table>
-        )}
-      </div>
+      <h2 className="mb-1 text-lg font-semibold">Payment history</h2>
+      <p className="mb-4 text-sm text-slate-500">Payments attributed to this influencer</p>
+      <DataTable
+        columns={[
+          { key: 'description', label: 'Description', render: (v) => v || '—' },
+          { key: 'createdAt', label: 'Date', render: (v) => formatDate(v) },
+          { key: 'paymentMethod', label: 'Method', render: (v) => String(v || '—').replace(/_/g, ' ') },
+          {
+            key: 'amount',
+            label: 'Amount',
+            render: (v) => `${ORG.currencySymbol}${Number(v || 0).toLocaleString('en-IN')}`,
+          },
+          { key: 'status', label: 'Status', render: (v) => <StatusBadge status={String(v || '').toLowerCase()} /> },
+        ]}
+        data={rows}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyMessage="No payments attributed to this influencer yet"
+      />
     </>
   );
 }
@@ -235,8 +246,8 @@ export default function InfluencerDetail({ influencer, onBack, onRestrict, onCre
   function renderTab() {
     switch (tab) {
       case 'Campaigns': return <CampaignsTab influencerId={influencer.id} />;
-      case 'Audience':  return <AudienceTab />;
-      case 'Payments':  return <PaymentsTab />;
+      case 'Audience':  return <AudienceTab influencerId={influencer.id} />;
+      case 'Payments':  return <PaymentsTab influencerId={influencer.id} />;
       default: return <div className="flex items-center justify-center h-40 text-slate-400">{tab} — Coming soon</div>;
     }
   }
