@@ -13,6 +13,15 @@ For security and config issues (unauthenticated Razorpay webhook, missing TLS,
 unconfigured mailer) see **`BACKEND_GAPS.md`** — this file is only about endpoints
 that do not exist.
 
+> **Re-checked 2026-08-24:** the backend team reported these as available. They
+> are not, on this deployment — all 11 still return 404 (or 400 for the filter),
+> and `/v1/health` shows the process up 25.2h, so nothing has been redeployed.
+> Most likely the work is merged but not shipped to `13.204.191.64`, or it went
+> to an environment we have not been told about.
+>
+> Run `node scripts/check-apis.mjs` to re-verify (exits non-zero with the count
+> still missing). Point it elsewhere with `API=http://host:3000`.
+
 ---
 
 ## Priority 1 — blocks visibly broken screens
