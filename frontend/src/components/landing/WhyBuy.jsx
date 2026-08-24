@@ -3,6 +3,10 @@ import Button from '@/components/Button';
 const PROMO_BODY =
   'Choose your subscription plans to get magazines every month, subscription plans to get magazines every';
 
+// Giving happens on the foundation's own site — there is no donation flow in
+// this app or its API, so these CTAs hand off rather than pretending to collect.
+const DONATE_URL = 'https://ramdootrestores.in';
+
 const PROMOS = [
   { title: 'Temple Restoration', cta: 'Donate Now' },
   { title: 'Feed Animals Do Gau Seva', cta: 'Contribute' },
@@ -22,10 +26,7 @@ function PromoCard({ title, cta }) {
       <div className="relative max-w-[554px]">
         <p className="text-sm leading-relaxed text-white/85">{PROMO_BODY}</p>
         <div className="mt-5">
-          {/* TODO(product): these donation CTAs have no destination — the app
-              and the API have no donation flow. Needs either a donation feature
-              or an external giving link before launch. */}
-          <Button text={cta} handler={() => {}} />
+          <Button text={cta} href={DONATE_URL} external />
         </div>
       </div>
     </div>
