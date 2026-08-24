@@ -177,6 +177,15 @@ export const magazinesApi = {
   // Resolves the PDF URL for the reader and increments readsCount server-side.
   // 400s with "This magazine has no PDF uploaded yet" when there is no file.
   read: (id) => request(`/magazines/${id}/read`),
+  // { magazineId, title, status, publishedAt, viewsCount, readsCount,
+  //   engagementRate: "0%", revenue }
+  performance: (id) => request(`/magazines/${id}/performance`),
+  // { magazineId, title, price: "59.00" (string), totalRevenue, totalSales,
+  //   revenueByDay: [] }
+  financials: (id) => request(`/magazines/${id}/financials`),
+  // Currently a stub: returns { versions: [], note: "... not yet implemented" }.
+  // Kept wired so the tab lights up on its own once the backend fills it in.
+  versions: (id) => request(`/magazines/${id}/versions`),
 };
 
 // Neutral cover used when a magazine has no uploaded image (e.g. seeded data).
@@ -268,6 +277,9 @@ export const campaignsApi = {
   list: (params = {}) => request(`/campaigns${qs(params)}`),
   get: (id) => request(`/campaigns/${id}`),
   overview: (id) => request(`/campaigns/${id}/overview`),
+  // { campaignId, commissionRate, totalRevenue, totalCommission,
+  //   totalConversions, averageOrderValue, revenueByDay: [] }
+  financials: (id) => request(`/campaigns/${id}/financials`),
   create: (body) => request('/campaigns', { method: 'POST', body }),
 };
 
@@ -283,6 +295,10 @@ export const earningsApi = {
 // ---- Payments ----
 export const paymentsApi = {
   mine: () => request('/payments/me'),
+  // Single payment by id, for confirming a checkout result. NOTE: `amount`
+  // comes back as a STRING here ("1299.00") where /admin/payments returns a
+  // number — coerce with Number() at the call site.
+  get: (id) => request(`/payments/${id}`),
   record: (body) => request('/payments', { method: 'POST', body }),
 
   // Opens a Razorpay order and stores a PENDING payment row server-side.
@@ -307,6 +323,24 @@ export const adminApi = {
   // matters before charting it.
   revenueSeries: ({ granularity = 'day', days = 30 } = {}) =>
     request(`/admin/analytics/revenue${qs({ granularity, days })}`),
+
+  // Platform-wide, unlike /payments/me and /earnings/payouts which are both
+  // caller-scoped and return the *admin's own* rows.
+  // { data: [{ id, amount, status, paymentMethod, relatedType, description,
+  //            createdAt, user: { id, fullName, email } }], meta }
+  payments: (params = {}) => request(`/admin/payments${qs(params)}`),
+  // { data: [{ id, amount, status, transactionId, notes, processedAt,
+  //            createdAt, user: {...} }], meta }
+  payouts: (params = {}) => request(`/admin/payouts${qs(params)}`),
+  // { subscriptions, singleSales, payoutsPaid, netRevenue }
+  revenueBreakdown: (params = {}) =>
+    request(`/admin/analytics/revenue-breakdown${qs(params)}`),
+  // { totalClicks, totalConversions, conversionRate: "20.00%",
+  //   totalCommissionEarned, activeCampaigns, clicksByMedium: [{medium,count}],
+  //   topCampaigns: [{ id, name, promoCode, status, clicks, conversions }] }
+  influencerAudience: (id) => request(`/influencers/${id}/audience`),
+  influencerPayments: (id, params = {}) =>
+    request(`/admin/influencers/${id}/payments${qs(params)}`),
 };
 
 // ---- Notifications ----

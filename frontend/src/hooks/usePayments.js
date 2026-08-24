@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
-import { paymentsApi, earningsApi, adminApi, listOf, lc } from '@/lib/api';
+import { useState, useCallback } from 'react';
+import { adminApi, listOf, lc } from '@/lib/api';
 
-// NOTE: the backend exposes only the *current user's* payments (/payments/me)
-// and payouts (/earnings/payouts) — there is no admin-wide list yet, so for an
-// admin these tables are real but typically empty.
+// Admin-scoped: /admin/payments and /admin/payouts describe the whole platform.
+// The caller-scoped /payments/me and /earnings/payouts are deliberately not used
+// here — for an admin they return that admin's own (empty) rows, which is why
+// this page used to show "Total Revenue ₹0" above a chart reading ₹1,448.
 function mapPayment(p) {
   return {
     ...p,
@@ -21,65 +22,39 @@ function mapPayout(p) {
     influencerId: p.userId || p.influencerId,
     amount: Number(p.amount ?? 0),
     status: lc(p.status),
+    // /admin/payouts does not join the campaign, so there is no name to show.
     campaignLink: p.campaign?.name || '—',
   };
-}
-
-const sum = (rows) => rows.reduce((a, r) => a + r.amount, 0);
-
-// Revenue splits. `relatedType` is set when the order is created; the checkout
-// flow tags subscription purchases as "subscription", so anything else that
-// settled is a one-off sale.
-function paymentTotalsOf(rows) {
-  const settled = rows.filter((p) => p.status === 'success');
-  const subs = settled.filter((p) => String(p.relatedType || '').toLowerCase() === 'subscription');
-  const total = sum(settled);
-  return { totalRevenue: total, subscriptions: sum(subs), singleSales: total - sum(subs) };
-}
-
-function payoutTotalsOf(rows) {
-  return { influencerPayouts: sum(rows.filter((p) => p.status === 'success')) };
 }
 
 export default function usePayments() {
   const [payments, setPayments] = useState([]);
   const [payouts, setPayouts] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   // Set when a primary list fetch fails so the page can show an inline
   // error with a retry, instead of an empty table that looks like "no data".
   const [error, setError] = useState(null);
 
-  // Totals are kept apart from the table rows so the cards keep describing the
-  // whole account while the table is filtered down.
-  const [paymentTotals, setPaymentTotals] = useState(null);
-  const [payoutTotals, setPayoutTotals] = useState(null);
-  // Platform-wide figures. /payments/me and /earnings/payouts are both
-  // caller-scoped, so for an admin they describe that admin's own account, not
-  // the platform — which is why "Total Revenue" read ₹0 next to a chart showing
-  // ₹1,448. /admin/analytics/dashboard is the only platform-wide source.
-  const [platform, setPlatform] = useState(null);
-
-  // Undefined (not 0) for anything with no real source, so the card shows "—"
-  // instead of asserting a figure nothing computed.
-  const stats = useMemo(() => {
-    if (!paymentTotals && !payoutTotals && !platform) return null;
-    return {
-      totalRevenue: platform?.revenue?.total ?? paymentTotals?.totalRevenue,
-      // No platform-wide payments list exists yet, so there is no way to split
-      // revenue by relatedType or to total what has actually been paid out
-      // across all influencers. See BACKEND_GAPS.md #4.
-      subscriptions: undefined,
-      singleSales: undefined,
-      influencerPayouts: undefined,
-      netRevenue: undefined,
-    };
-  }, [paymentTotals, payoutTotals, platform]);
-
-  const fetchPlatformTotals = useCallback(async () => {
+  // Filtering is server-side now (`?status=`), so the totals cannot be derived
+  // from the rows on screen — they come from their own endpoint and keep
+  // describing the whole platform while the table is filtered down.
+  const fetchStats = useCallback(async () => {
     try {
-      setPlatform(await adminApi.analytics());
+      const [breakdown, analytics] = await Promise.all([
+        adminApi.revenueBreakdown(),
+        adminApi.analytics(),
+      ]);
+      setStats({
+        totalRevenue: analytics?.revenue?.total ?? breakdown?.netRevenue,
+        subscriptions: breakdown?.subscriptions,
+        singleSales: breakdown?.singleSales,
+        influencerPayouts: breakdown?.payoutsPaid,
+        netRevenue: breakdown?.netRevenue,
+      });
     } catch (err) {
-      setPlatform(null);
+      // Null, not zeroes — the cards render "—" rather than assert a figure.
+      setStats(null);
       setError((prev) => prev || err.message || 'Could not load revenue totals');
     }
   }, []);
@@ -87,11 +62,13 @@ export default function usePayments() {
   const fetchPayments = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      const all = listOf(await paymentsApi.mine()).map(mapPayment);
-      setPaymentTotals(paymentTotalsOf(all));
-      setPayments(filters.status ? all.filter((p) => p.status === lc(filters.status)) : all);
+      const res = await adminApi.payments({
+        status: filters.status ? String(filters.status).toUpperCase() : undefined,
+        search: filters.search || undefined,
+        limit: 100,
+      });
+      setPayments(listOf(res).map(mapPayment));
     } catch (err) {
-      setPaymentTotals(null);
       setError(err.message || 'Could not load payments');
     }
   }, []);
@@ -99,20 +76,27 @@ export default function usePayments() {
   const fetchPayouts = useCallback(async (filters = {}) => {
     try {
       setError(null);
-      const all = listOf(await earningsApi.payouts()).map(mapPayout);
-      setPayoutTotals(payoutTotalsOf(all));
-      setPayouts(filters.status ? all.filter((p) => p.status === lc(filters.status)) : all);
+      const res = await adminApi.payouts({
+        status: filters.status ? String(filters.status).toUpperCase() : undefined,
+        limit: 100,
+      });
+      let rows = listOf(res).map(mapPayout);
+      // /admin/payouts takes no `search` param, so that one stays client-side.
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        rows = rows.filter((p) => (p.influencerName || '').toLowerCase().includes(q));
+      }
+      setPayouts(rows);
     } catch (err) {
-      setPayoutTotals(null);
       setError(err.message || 'Could not load payouts');
     }
   }, []);
 
   const init = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchPayments(), fetchPayouts(), fetchPlatformTotals()]);
+    await Promise.all([fetchStats(), fetchPayments(), fetchPayouts()]);
     setLoading(false);
-  }, [fetchPayments, fetchPayouts, fetchPlatformTotals]);
+  }, [fetchStats, fetchPayments, fetchPayouts]);
 
   // No retry/refund endpoints yet — refresh so the UI stays consistent.
   const retryPayment = useCallback(async () => { await fetchPayments(); }, [fetchPayments]);
