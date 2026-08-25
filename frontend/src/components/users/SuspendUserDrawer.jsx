@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toastError } from '@/lib/confirm';
+import SupportLink from '@/components/SupportLink';
 
 const DURATIONS = ['1 Day', '3 Days', '7 Days', '14 Days', '30 Days'];
 const REASONS = [
@@ -148,7 +149,7 @@ export default function SuspendUserDrawer({ open, user, action = 'suspended', on
                 {!submitting && <ArrowIcon />}
               </button>
               <p className="text-xs text-center text-slate-400">
-                Trouble in deactivate account? <span className="text-slate-700 font-medium underline underline-offset-2 cursor-pointer">Connect Us</span>
+                Trouble in deactivate account? <SupportLink className="text-slate-700 font-medium underline underline-offset-2 hover:text-slate-900">Connect Us</SupportLink>
               </p>
             </>
           )}

@@ -1,5 +1,6 @@
 import Drawer from '@/components/ui/drawer';
 import { toastSuccess } from '@/lib/confirm';
+import SupportLink from '@/components/SupportLink';
 
 function CopyIcon() {
   return (
@@ -48,9 +49,7 @@ export default function ShareCampaignDrawer({ open, onClose, campaignLink, promo
   const footer = (
     <p className="text-center text-xs text-slate-400">
       Trouble in getting code?{' '}
-      <button type="button" className="font-semibold text-slate-600 hover:text-slate-900">
-        Connect Support
-      </button>
+      <SupportLink className="font-semibold text-slate-600 hover:text-slate-900">Connect Support</SupportLink>
     </p>
   );
 

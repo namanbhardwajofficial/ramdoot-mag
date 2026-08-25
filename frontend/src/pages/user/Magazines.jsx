@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import MagazineCollection, {
   ViewToggle,
 } from "@/components/user/MagazineCollection";
+import ErrorState from "@/components/ui/error-state";
+import useAsync from "@/hooks/useAsync";
 import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 
 /**
@@ -13,21 +15,17 @@ import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 export default function Magazines() {
   const navigate = useNavigate();
   const [view, setView] = useState("grid");
-  const [mags, setMags] = useState([]);
-
-  useEffect(() => {
-    let alive = true;
-    magazinesApi
-      .list({ status: "LIVE", limit: 24 })
-      .then((res) => {
-        const items = listOf(res).map(toMagazineCard);
-        if (alive) setMags(items);
-      })
-      .catch((err) => console.warn("magazines", err.message));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // Failure here used to be a console.warn, leaving an empty catalogue with no
+  // way to tell "nothing published yet" from "the request failed".
+  const {
+    data: mags,
+    error,
+    loading,
+    reload,
+  } = useAsync(() => magazinesApi.list({ status: "LIVE", limit: 24 }), [], {
+    initial: [],
+    map: (res) => listOf(res).map(toMagazineCard),
+  });
 
   return (
     <div>
@@ -41,11 +39,17 @@ export default function Magazines() {
         <ViewToggle view={view} onChange={setView} />
       </div>
 
-      <MagazineCollection
-        magazines={mags}
-        view={view}
-        onRead={(m) => navigate(`/user/magazines/${m.id}`)}
-      />
+      {error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : loading ? (
+        <p className="py-10 text-center text-sm text-slate-400">Loading magazines&hellip;</p>
+      ) : (
+        <MagazineCollection
+          magazines={mags}
+          view={view}
+          onRead={(m) => navigate(`/user/magazines/${m.id}`)}
+        />
+      )}
     </div>
   );
 }

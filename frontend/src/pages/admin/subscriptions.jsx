@@ -12,6 +12,15 @@ import { confirmDelete, toastSuccess, toastError } from '@/lib/confirm';
 import { ORG, SUBSCRIPTION_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
+import { sortRows } from '@/lib/sort';
+
+const SUB_SORTS = [
+  { value: 'price:desc', label: 'Price (high→low)' },
+  { value: 'price:asc', label: 'Price (low→high)' },
+  { value: 'type:asc', label: 'Type' },
+  { value: 'updatedAt:desc', label: 'Recently updated' },
+  { value: 'status:asc', label: 'Status' },
+];
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -57,6 +66,8 @@ export default function Subscriptions() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // Backs the Toolbar's "Sort by", which had no handler at all before.
+  const [sortBy, setSortBy] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -149,8 +160,8 @@ export default function Subscriptions() {
           <h2 className="text-lg font-semibold">Subscription List</h2>
           <p className="text-sm text-slate-500">Every plan your subscribers can buy</p>
         </div>
-        <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(SUBSCRIPTION_STATUSES)} search={search} onSearchChange={setSearch} />
-        <DataTable columns={columns} data={subscriptions} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} emptyMessage="No subscriptions found" />
+        <Toolbar statusFilter={statusFilter} onStatusChange={setStatusFilter} statusOptions={Object.values(SUBSCRIPTION_STATUSES)} search={search} onSearchChange={setSearch} sortOptions={SUB_SORTS} sort={sortBy} onSortChange={setSortBy} />
+        <DataTable columns={columns} data={sortRows(subscriptions, sortBy)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} emptyMessage="No subscriptions found" />
       </section>
 
       {showModal && <AddPlanModal plans={plans} onClose={() => setShowModal(false)} onSubmit={handleCreate} />}

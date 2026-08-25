@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BellIcon, InfoIcon, XIcon } from '@/components/ui/icons';
 import Drawer from '@/components/ui/drawer';
+import ErrorState from '@/components/ui/error-state';
 import { notificationsApi, listOf } from '@/lib/api';
 import { toastError } from '@/lib/confirm';
 
@@ -13,42 +14,49 @@ export default function NotificationBell({ className = '' }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
+  // A failed load used to console.warn, so the drawer said "You're all caught
+  // up" — a claim about the user's inbox — when the request had actually failed.
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
-    notificationsApi
-      .list()
-      .then((res) => {
-        if (!alive) return;
-        const list = listOf(res).map((n) => ({
-          id: n.id,
-          title: n.title,
-          body: n.message,
-          isRead: n.isRead,
-        }));
-        setItems(list);
-        // The total lives on `meta`, not the top level — reading it here is
-        // free. The dedicated endpoint below confirms it.
-        const fromMeta = Number(res?.meta?.unreadCount);
-        setUnread(Number.isFinite(fromMeta) ? fromMeta : list.filter((n) => !n.isRead).length);
-      })
-      .catch((err) => console.warn('notifications', err.message));
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    const listing = notificationsApi.list().then((res) => {
+      const list = listOf(res).map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.message,
+        isRead: n.isRead,
+      }));
+      setItems(list);
+      // The total lives on `meta`, not the top level — reading it here is
+      // free. The dedicated endpoint below confirms it.
+      const fromMeta = Number(res?.meta?.unreadCount);
+      setUnread(Number.isFinite(fromMeta) ? fromMeta : list.filter((n) => !n.isRead).length);
+    });
 
     // Authoritative count. GET /notifications pages at 20, so counting unread
     // rows in the first page under-reports for anyone with more than that.
+    // If only this one fails the listing is still usable, so it does not set the
+    // error — the count from `meta` above just stands.
     notificationsApi
       .unreadCount()
       .then((res) => {
-        if (!alive) return;
         const n = Number(res?.unreadCount);
         if (Number.isFinite(n)) setUnread(n);
       })
-      .catch((err) => console.warn('unreadCount', err.message));
+      .catch(() => {});
 
-    return () => {
-      alive = false;
-    };
+    return listing
+      .catch((err) => {
+        setItems([]);
+        setError(err.message || 'Could not load notifications');
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const markAllRead = async () => {
     const prevItems = items;
@@ -97,7 +105,11 @@ export default function NotificationBell({ className = '' }) {
       </button>
 
       <Drawer open={open} onClose={() => setOpen(false)} title="Notifications">
-        {items.length === 0 ? (
+        {error ? (
+          <ErrorState message={error} onRetry={load} className="my-6" />
+        ) : loading ? (
+          <div className="py-16 text-center text-sm text-slate-400">Loading&hellip;</div>
+        ) : items.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">
             You&apos;re all caught up
           </div>

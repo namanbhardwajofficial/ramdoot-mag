@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import Button from '@/components/Button.jsx';
+import ErrorState from '@/components/ui/error-state';
 import PayoutRequestedDrawer from '@/components/influencers/PayoutRequestedDrawer';
 import { earningsApi, getStoredUser, listOf } from '@/lib/api';
 import { toastError } from '@/lib/confirm';
-
-const trend = [10, 14, 12, 20, 17, 25, 22, 30, 27, 36].map((v) => ({ v }));
+import SupportLink from '@/components/SupportLink';
 
 // Sentinel for the "add a new bank account" option in the account picker.
 const NEW_ACCOUNT = '__new__';
@@ -38,24 +37,20 @@ function Field({ label, required, hint, className = '', children }) {
   );
 }
 
+/**
+ * Both of these used to carry an AreaChart over one shared literal array —
+ * the identical ten-point climb under every figure, on every account. There is
+ * no per-influencer time series to plot, so the chart is gone and the number
+ * stands on its own. A null value renders a dash rather than a confident zero.
+ */
 function MiniStat({ label, value }) {
+  const unknown = value === null || value === undefined;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
-      <div className="h-12 mt-1 -mx-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={trend} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={`g-${label}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#34D399" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#34D399" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area type="monotone" dataKey="v" stroke="#34D399" strokeWidth={2} fill={`url(#g-${label})`} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      <p className="text-2xl font-bold text-slate-900 mt-1">
+        {unknown ? <span className="text-slate-300" title="Not loaded">&mdash;</span> : value}
+      </p>
     </div>
   );
 }
@@ -102,10 +97,13 @@ export default function RequestPayout() {
   const [step, setStep] = useState(0);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [stats, setStats] = useState({ commission: 0, available: 0 });
+  const [stats, setStats] = useState(null);
   // Saved payout accounts. `NEW_ACCOUNT` means "enter fresh bank details".
   const [accounts, setAccounts] = useState([]);
   const [accountId, setAccountId] = useState(NEW_ACCOUNT);
+  // Both loads used to console.warn on failure, leaving zeroed cards and an
+  // empty account picker with no hint that anything had gone wrong.
+  const [errors, setErrors] = useState({ earnings: null, accounts: null });
   const [form, setForm] = useState({
     fullName: '',
     phone: '',
@@ -122,6 +120,39 @@ export default function RequestPayout() {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const setErr = (key, msg) => setErrors((e) => ({ ...e, [key]: msg }));
+
+  // Load real earnings for the summary cards + default the withdrawal amount.
+  const loadEarnings = useCallback(() => {
+    setErr('earnings', null);
+    return earningsApi
+      .overview()
+      .then((e) => {
+        const commission = Number(e?.totalEarnings ?? 0);
+        const available = Number(e?.availableBalance ?? 0);
+        setStats({ commission, available });
+        setForm((f) =>
+          f.withdrawAmount ? f : { ...f, withdrawAmount: available > 0 ? String(available) : '' },
+        );
+      })
+      .catch((err) => setErr('earnings', err.message || 'Could not load your balance'));
+  }, []);
+
+  // Reuse an already-saved payout account instead of creating a duplicate on
+  // every request. The API masks the account number, so we match by id only.
+  const loadAccounts = useCallback(() => {
+    setErr('accounts', null);
+    return earningsApi
+      .bankAccounts()
+      .then((res) => {
+        const list = listOf(res);
+        setAccounts(list);
+        const preferred = list.find((a) => a.isDefault) || list[0];
+        if (preferred) setAccountId(preferred.id);
+      })
+      .catch((err) => setErr('accounts', err.message || 'Could not load your saved accounts'));
+  }, []);
+
   useEffect(() => {
     // Prefill personal details from the signed-in user.
     const u = getStoredUser();
@@ -134,31 +165,9 @@ export default function RequestPayout() {
         accountHolder: u.fullName || '',
       }));
     }
-    // Load real earnings for the summary cards + default the withdrawal amount.
-    earningsApi
-      .overview()
-      .then((e) => {
-        const commission = Number(e?.totalEarnings ?? 0);
-        const available = Number(e?.availableBalance ?? 0);
-        setStats({ commission, available });
-        setForm((f) =>
-          f.withdrawAmount ? f : { ...f, withdrawAmount: available > 0 ? String(available) : '' },
-        );
-      })
-      .catch((err) => console.warn('earnings', err.message));
-
-    // Reuse an already-saved payout account instead of creating a duplicate on
-    // every request. The API masks the account number, so we match by id only.
-    earningsApi
-      .bankAccounts()
-      .then((res) => {
-        const list = listOf(res);
-        setAccounts(list);
-        const preferred = list.find((a) => a.isDefault) || list[0];
-        if (preferred) setAccountId(preferred.id);
-      })
-      .catch((err) => console.warn('bankAccounts', err.message));
-  }, []);
+    loadEarnings();
+    loadAccounts();
+  }, [loadEarnings, loadAccounts]);
 
   async function handleRequest() {
     const amount = Number(form.withdrawAmount);
@@ -213,8 +222,20 @@ export default function RequestPayout() {
             <p className="text-sm text-slate-500 mt-1">View all the earning report from all your links and shares from</p>
           </div>
 
-          <MiniStat label="Commission Earning" value={stats.commission.toLocaleString('en-IN')} />
-          <MiniStat label="Payout Available" value={stats.available.toLocaleString('en-IN')} />
+          {errors.earnings ? (
+            <ErrorState message={errors.earnings} onRetry={loadEarnings} className="px-4 py-5" />
+          ) : (
+            <>
+              <MiniStat
+                label="Commission Earning"
+                value={stats ? stats.commission.toLocaleString('en-IN') : null}
+              />
+              <MiniStat
+                label="Payout Available"
+                value={stats ? stats.available.toLocaleString('en-IN') : null}
+              />
+            </>
+          )}
 
           <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-sky-300 via-sky-400 to-blue-500 p-5">
             <div className="absolute -right-3 -top-3 text-6xl opacity-90 select-none">🪙</div>
@@ -273,6 +294,12 @@ export default function RequestPayout() {
             </div>
           ) : (
             <div className="space-y-5">
+              {/* A failed account load looks exactly like "you have no saved
+                  accounts", which would quietly push the user into re-entering
+                  bank details they have already given us. */}
+              {errors.accounts && (
+                <ErrorState message={errors.accounts} onRetry={loadAccounts} className="px-4 py-5" />
+              )}
               {accounts.length > 0 && (
                 <Field label="Payout Account" required hint="Where the money will be sent">
                   <select
@@ -342,7 +369,7 @@ export default function RequestPayout() {
             )}
             <p className="text-center text-xs text-slate-400 mt-3">
               Trouble withdrawing funds?{' '}
-              <button type="button" className="font-semibold text-slate-600 hover:text-slate-900">Connect Us</button>
+              <SupportLink className="font-semibold text-slate-600 hover:text-slate-900">Connect Us</SupportLink>
             </p>
           </div>
         </section>

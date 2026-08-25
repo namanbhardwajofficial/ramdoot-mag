@@ -54,13 +54,32 @@ export function StatValue({ value, format, className = '' }) {
   return <span className={className}>{shown}</span>;
 }
 
+/**
+ * Period options for the cards whose figure really can be scoped to a window.
+ * Values are day counts, which is what the endpoints that support it take
+ * (`days` on /admin/analytics/revenue, `from`/`to` on /admin/payments).
+ */
+export const PERIODS = [
+  { value: 7, label: 'This Week' },
+  { value: 30, label: 'This Month' },
+  { value: 90, label: 'This Quarter' },
+  { value: 365, label: 'This Year' },
+];
+
 export default function StatCard({
   title,
   value,
   color = '#10b981',
   series,
   prefix = '',
-  periodLabel = 'This Month',
+  // Period selector. It renders only when a caller passes `onPeriodChange` —
+  // it used to be an unconditional <select> with a `defaultValue` and no
+  // handler, so ~20 cards across the admin area offered "This Month / This
+  // Week / Today / This Year" and did nothing whatever was picked. Most of
+  // these figures are whole-account totals with no period behind them at all.
+  period,
+  onPeriodChange,
+  periods = PERIODS,
   changeLabel,
   changeColor,
 }) {
@@ -71,17 +90,22 @@ export default function StatCard({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 flex-1 min-w-50">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 gap-2">
         <span className="text-sm font-medium text-slate-700">{title}</span>
-         <select
-          defaultValue={periodLabel}
-          className="text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-4xl px-3 py-1.5 outline-none cursor-pointer"
-        >
-          <option>This Month</option>
-          <option>This Week</option>
-          <option>Today</option>
-          <option>This Year</option>
-        </select>
+        {onPeriodChange && (
+          <select
+            value={period}
+            onChange={(e) => onPeriodChange(Number(e.target.value))}
+            aria-label={`${title} period`}
+            className="text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-4xl px-3 py-1.5 outline-none cursor-pointer"
+          >
+            {periods.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="text-3xl font-bold text-slate-900 mt-2">
         {unknown ? (

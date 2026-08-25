@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { usersApi, listOf, lc } from '@/lib/api';
+import { toastError } from '@/lib/confirm';
 
 function fmtDate(iso) {
   if (!iso) return '—';
@@ -104,11 +105,16 @@ export default function useUsers() {
 
   // Full record for one user, for the detail view. Returns null on failure so
   // the caller can fall back to the list row rather than showing nothing.
+  //
+  // The fallback is real data, just thinner — no plan, billing or 2FA — so the
+  // detail view still renders and only looks like the user has none of those.
+  // This is opened by a click, so a toast is the right shape: it tells the user
+  // what they are looking at without replacing a usable screen with an error.
   const fetchUser = useCallback(async (id) => {
     try {
       return mapUserDetail(await usersApi.get(id));
     } catch (err) {
-      console.warn('fetchUser', err.message);
+      toastError(`${err.message || 'Could not load the full record'} — showing partial details.`);
       return null;
     }
   }, []);

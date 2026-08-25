@@ -11,6 +11,9 @@ import { toastSuccess, toastError } from "@/lib/confirm";
  */
 export default function MyDetailsPanel() {
   const [form, setForm] = useState({ fullName: "", phone: "", email: "" });
+  // The refresh from GET /users/me used to console.warn on failure, leaving
+  // whatever was cached at login on screen as though it were current.
+  const [staleWarning, setStaleWarning] = useState(null);
   const [saving, setSaving] = useState(false);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -35,7 +38,10 @@ export default function MyDetailsPanel() {
           email: me.email || "",
         });
       })
-      .catch((err) => console.warn("me", err.message));
+      .catch((err) => {
+        if (!alive) return;
+        setStaleWarning(err.message || "Could not refresh your details");
+      });
     return () => {
       alive = false;
     };
@@ -65,6 +71,12 @@ export default function MyDetailsPanel() {
         title="Personal Info"
         subtitle="Update your name, phone number and email address"
       />
+
+      {staleWarning && (
+        <p role="alert" className="mb-4 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-800">
+          Showing your saved details &mdash; we couldn&apos;t refresh them from the server ({staleWarning}).
+        </p>
+      )}
 
       <div className="space-y-5">
         <Field label="Full Name">

@@ -1,5 +1,6 @@
 import Drawer from '@/components/ui/drawer';
 import { ORG } from '@/config/constants';
+import SupportLink from '@/components/SupportLink';
 
 function Field({ label, value }) {
   return (
@@ -51,7 +52,7 @@ export default function PaymentDetailsDrawer({
                 </button>
                 <span className="text-xs text-slate-400">
                   Trouble in getting refund{' '}
-                  <span className="font-medium text-slate-900">Connect Support</span>
+                  <SupportLink>Connect Support</SupportLink>
                 </span>
               </div>
             </>
@@ -68,7 +69,7 @@ export default function PaymentDetailsDrawer({
               </button>
               <p className="text-center text-xs text-slate-400">
                 Trouble in getting refund{' '}
-                <span className="font-medium text-slate-900">Connect Support</span>
+                <SupportLink>Connect Support</SupportLink>
               </p>
             </>
           )}

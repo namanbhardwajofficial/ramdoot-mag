@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Button from '@/components/Button.jsx';
+import ErrorState from '@/components/ui/error-state';
 import { Field, inputCls, PanelHeader } from './fields';
 import { earningsApi, getStoredUser, listOf } from '@/lib/api';
 import { toastSuccess, toastError } from '@/lib/confirm';
@@ -62,17 +63,20 @@ export default function PayoutPanel() {
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  // A failed load used to fire a toast and console.warn, then show "no payout
+  // accounts" — inviting the user to re-enter details they already have saved.
+  const [error, setError] = useState(null);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const load = useCallback(
     () =>
       earningsApi
         .bankAccounts()
-        .then((res) => setAccounts(listOf(res)))
-        .catch((err) => {
-          console.warn('bankAccounts', err.message);
-          toastError('Could not load your payout accounts');
-        }),
+        .then((res) => {
+          setAccounts(listOf(res));
+          setError(null);
+        })
+        .catch((err) => setError(err.message || 'Could not load your payout accounts')),
     [],
   );
 
@@ -123,7 +127,9 @@ export default function PayoutPanel() {
         subtitle="The bank account where your campaign payouts are sent"
       />
 
-      {loading ? (
+      {error ? (
+        <ErrorState message={error} onRetry={() => load()} />
+      ) : loading ? (
         <p className="text-sm text-slate-400">Loading payout accounts…</p>
       ) : (
         <div className="space-y-6">

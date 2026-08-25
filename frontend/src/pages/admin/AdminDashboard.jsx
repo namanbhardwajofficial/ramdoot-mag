@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import StatCard, { StatValue } from '@/components/ui/stat-card';
 import DataTable from '@/components/ui/data-table';
 import ErrorState from '@/components/ui/error-state';
 import { CHART_COLORS } from '@/config/theme';
-import { ORG } from '@/config/constants';
+import { ORG, API_ORIGIN } from '@/config/constants';
 import Button from "@/components/Button.jsx";
-import { adminApi, magazinesApi, listOf } from '@/lib/api';
+import CreateCampaignModal from '@/components/influencers/CreateCampaignModal';
+import { toastSuccess } from '@/lib/confirm';
+import { adminApi, magazinesApi, campaignsApi, listOf } from '@/lib/api';
 import { fillSeries, seriesValues } from '@/lib/series';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -23,6 +26,11 @@ function fmtDateTime(iso) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  // "Create Campaigns" in the Revenue header was a dead <Button>; it opens the
+  // same form the influencer detail view uses (influencerId is optional on
+  // POST /campaigns, so a campaign can be created unassigned from here).
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [counts, setCounts] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
   const [magRows, setMagRows] = useState([]);
@@ -117,6 +125,8 @@ export default function AdminDashboard() {
         status: m.status,
         clicks: m.viewsCount ?? 0,
         conversions: m.readsCount ?? 0,
+        // Kept so the row's Preview button has something to open.
+        pdfUrl: m.pdfUrl || m.fileUrl || null,
         revenue: Number(m.price ?? 0),
         published: m.publishedAt
           ? new Date(m.publishedAt).toLocaleDateString('en-IN')
@@ -141,6 +151,20 @@ export default function AdminDashboard() {
     loadRevenue();
     return () => { alive.current = false; };
   }, [loadDashboard, loadAnalytics, loadLogs, loadMagazines, loadRevenue]);
+
+  // Relative upload paths need the backend origin bolted on; absolute ones
+  // (S3 and the like) are already complete.
+  function openPreview(row) {
+    if (!row.pdfUrl) return;
+    const href = row.pdfUrl.startsWith('http') ? row.pdfUrl : `${API_ORIGIN}${row.pdfUrl}`;
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
+
+  async function handleCreateCampaign(payload) {
+    await campaignsApi.create(payload);
+    setShowCreateCampaign(false);
+    toastSuccess('Campaign created');
+  }
 
   const overview = analytics?.overview;
 
@@ -183,10 +207,26 @@ export default function AdminDashboard() {
     { key: 'published', label: 'Published Date', render: (v) => <span className="text-slate-600">{v}</span> },
     {
       key: '_actions', label: '', align: 'right',
-      render: () => (
+      // Both of these had no handler. Preview opens the uploaded PDF and is
+      // disabled (with a reason) when the magazine has no file yet — which is
+      // every seeded one; View Details goes to the Publications screen, where
+      // the per-magazine drawer lives.
+      render: (_v, row) => (
         <div className="flex items-center justify-end gap-2">
-          <button className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md hover:bg-slate-200">Preview</button>
-          <button className="text-sm font-medium text-white bg-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-800">View Details</button>
+          <button
+            onClick={() => openPreview(row)}
+            disabled={!row.pdfUrl}
+            title={row.pdfUrl ? 'Open the PDF' : 'No PDF has been uploaded for this magazine'}
+            className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Preview
+          </button>
+          <button
+            onClick={() => navigate('/admin/publications')}
+            className="text-sm font-medium text-white bg-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-800"
+          >
+            View Details
+          </button>
         </div>
       ),
     },
@@ -225,7 +265,7 @@ export default function AdminDashboard() {
           <h2 className="font-semibold text-slate-900 text-lg">Revenue</h2>
           <div className="flex items-center gap-3">
              <span className="text-xs text-slate-400">Last 12 months</span>
-             <Button text="Create Campaigns" variant="primary" />
+             <Button text="Create Campaigns" handler={() => setShowCreateCampaign(true)} />
           </div>
         </div>
         {/* Real monthly revenue from GET /admin/analytics/revenue. Before that
@@ -300,7 +340,7 @@ export default function AdminDashboard() {
               </ul>
             )}
           </div>
-          <Button text="View Details" width="w-full" />
+          <Button text="View Details" width="100%" handler={() => navigate('/admin/users')} />
         </div>
 
         {/* Recent Payments — from the same /admin/dashboard response. This block
@@ -309,7 +349,7 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="font-semibold text-slate-900">Recent Payment Deposits</h3>
-                <Button text='View deposits' />
+                <Button text='View deposits' handler={() => navigate('/admin/payments')} />
             </div>
             {errors.dashboard ? (
               <ErrorState message={errors.dashboard} onRetry={loadDashboard} />
@@ -384,6 +424,13 @@ export default function AdminDashboard() {
           </ul>
         )}
       </section>
+
+      {showCreateCampaign && (
+        <CreateCampaignModal
+          onClose={() => setShowCreateCampaign(false)}
+          onSubmit={handleCreateCampaign}
+        />
+      )}
     </div>
   );
 }

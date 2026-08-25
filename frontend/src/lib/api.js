@@ -114,8 +114,16 @@ async function request(path, { method = 'GET', body, token, _skipRefresh = false
 
 // ---- Auth endpoints ----
 export const authApi = {
-  login: (email, password, rememberMe = false) =>
-    request('/auth/login', { method: 'POST', body: { email, password, rememberMe } }),
+  // `totpToken` is the 6-digit code from the authenticator app. It is only sent
+  // when we have one: accounts without 2FA sign in on the first call, and the
+  // backend answers a 2FA account with `401 "2FA token required"`, which the
+  // login form turns into a second step. Omitting the key entirely (rather than
+  // sending an empty string) keeps the DTO's optional validation happy.
+  login: ({ email, password, rememberMe = false, totpToken } = {}) =>
+    request('/auth/login', {
+      method: 'POST',
+      body: { email, password, rememberMe, ...(totpToken ? { totpToken } : {}) },
+    }),
 
   signupStep1: ({ email, fullName, phone, countryCode }) =>
     request('/auth/signup/step1', {
@@ -133,10 +141,10 @@ export const authApi = {
   resetPassword: ({ email, otp, newPassword }) =>
     request('/auth/reset-password', { method: 'POST', body: { email, otp, newPassword } }),
 
-  // Confirms a signup OTP. Separate from signupStep2 — that one also sets the
-  // password; this one only marks the address verified.
-  verifyEmail: ({ email, otp }) =>
-    request('/auth/verify-email', { method: 'POST', body: { email, otp } }),
+  // `POST /auth/verify-email` exists but nothing calls it: signup step 2 already
+  // verifies the address while setting the password, so there is no flow left
+  // that needs to verify one on its own. Removed rather than kept as an unused
+  // export — add it back if a "resend / confirm email" flow ever lands.
 
   // Authenticated password change. Backend requires the new password to be
   // >=8 chars with upper + lower + a digit, and rejects a wrong currentPassword
@@ -151,6 +159,14 @@ export const authApi = {
   enable2fa: (token) => request('/auth/2fa/enable', { method: 'POST', body: { token } }),
   disable2fa: () => request('/auth/2fa/disable', { method: 'POST' }),
 };
+
+// Does this login failure mean "we need the authenticator code"? The backend
+// answers a 2FA-enabled account with 401 "2FA token required", and a wrong code
+// with "Invalid 2FA token" — both should keep the user on the code step rather
+// than bouncing them back to the password form.
+export function isTwoFactorError(message) {
+  return /2fa|two[- ]?factor|totp|authenticat(?:or|ion code)/i.test(String(message || ''));
+}
 
 // ---- Magazines ----
 export const magazinesApi = {
@@ -183,9 +199,10 @@ export const magazinesApi = {
   // { magazineId, title, price: "59.00" (string), totalRevenue, totalSales,
   //   revenueByDay: [] }
   financials: (id) => request(`/magazines/${id}/financials`),
-  // Currently a stub: returns { versions: [], note: "... not yet implemented" }.
-  // Kept wired so the tab lights up on its own once the backend fills it in.
-  versions: (id) => request(`/magazines/${id}/versions`),
+  // `GET /magazines/:id/versions` is not wired. It exists, but ships as a stub —
+  // `{ versions: [], note: "Version history tracking is not yet implemented." }`
+  // — so a Versions tab in MagazineDetailsDrawer could only ever render that
+  // note. Add the method and the tab together when the endpoint returns rows.
 };
 
 // Neutral cover used when a magazine has no uploaded image (e.g. seeded data).
@@ -234,6 +251,24 @@ export function listOf(res) {
   if (Array.isArray(res)) return res;
   if (res && Array.isArray(res.data)) return res.data;
   return [];
+}
+
+// Pagination block that rides along with a list response:
+// { page, limit, total, totalPages, hasNextPage, hasPreviousPage }.
+// A bare array has no pagination, so callers get a single-page shape and their
+// pager collapses to one page instead of inventing a page count.
+export function metaOf(res, fallbackLimit = 10) {
+  const m = (res && !Array.isArray(res) && res.meta) || {};
+  const total = Number(m.total ?? listOf(res).length);
+  const limit = Number(m.limit ?? fallbackLimit) || fallbackLimit;
+  return {
+    page: Number(m.page ?? 1),
+    limit,
+    total,
+    totalPages: Number(m.totalPages ?? Math.max(1, Math.ceil(total / limit))),
+    hasNextPage: Boolean(m.hasNextPage),
+    hasPreviousPage: Boolean(m.hasPreviousPage),
+  };
 }
 
 // ---- Users (admin) ----
@@ -299,7 +334,10 @@ export const paymentsApi = {
   // comes back as a STRING here ("1299.00") where /admin/payments returns a
   // number — coerce with Number() at the call site.
   get: (id) => request(`/payments/${id}`),
-  record: (body) => request('/payments', { method: 'POST', body }),
+  // `POST /payments` has had no caller since checkout moved to
+  // `create-order` + the Razorpay webhook, which writes the row server-side.
+  // Recording a payment from the client would let anyone POST themselves a
+  // successful one, so it is deliberately not wired.
 
   // Opens a Razorpay order and stores a PENDING payment row server-side.
   // `amount` is in RUPEES (the backend converts to paise); the returned

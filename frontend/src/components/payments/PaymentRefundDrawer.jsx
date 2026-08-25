@@ -1,5 +1,6 @@
 import Drawer from '@/components/ui/drawer';
 import StepProgress from '@/components/ui/step-progress';
+import SupportLink from '@/components/SupportLink';
 
 const REFUND_STEPS = [
   { title: 'Payment refund requested', description: 'Please provide your name and email' },
@@ -26,7 +27,7 @@ export default function PaymentRefundDrawer({ open, onClose, currentStep = 1 }) 
           </button>
           <p className="text-center text-xs text-slate-400">
             Trouble in getting refund{' '}
-            <span className="font-medium text-slate-900">Connect Support</span>
+            <SupportLink>Connect Support</SupportLink>
           </p>
         </div>
       }

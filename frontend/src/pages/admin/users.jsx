@@ -13,6 +13,15 @@ import { confirmDelete, toastSuccess, toastError } from '@/lib/confirm';
 import { ORG, USER_STATUSES } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import Button from "@/components/Button.jsx";
+import { sortRows } from '@/lib/sort';
+
+const USER_SORTS = [
+  { value: 'name:asc', label: 'Name (A–Z)' },
+  { value: 'name:desc', label: 'Name (Z–A)' },
+  { value: 'joinedOn:desc', label: 'Newest first' },
+  { value: 'joinedOn:asc', label: 'Oldest first' },
+  { value: 'status:asc', label: 'Status' },
+];
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -39,12 +48,14 @@ export default function Users() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('');
+  // Client-side: the backend rejects sort params outright (see lib/sort.js).
+  const sortedUsers = sortRows(users, sortBy);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => { init(); }, [init]);
-  useFilterRefetch(fetchAll, { status: statusFilter, search, sort: sortBy }, !loading);
+  useFilterRefetch(fetchAll, { status: statusFilter, search }, !loading);
 
   async function handleAddUser(form) {
     try {
@@ -184,9 +195,12 @@ export default function Users() {
           statusOptions={Object.values(USER_STATUSES)}
           search={search}
           onSearchChange={setSearch}
+          sortOptions={USER_SORTS}
+          sort={sortBy}
+          onSortChange={setSortBy}
         />
 
-        <DataTable columns={listColumns} data={users} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search, sort: sortBy })} />
+        <DataTable columns={listColumns} data={sortedUsers} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
       </>
     );
   }
@@ -262,9 +276,12 @@ export default function Users() {
           statusOptions={Object.values(USER_STATUSES)}
           search={search}
           onSearchChange={setSearch}
+          sortOptions={USER_SORTS}
+          sort={sortBy}
+          onSortChange={setSortBy}
         />
 
-        <DataTable columns={dashboardColumns} data={users.slice(0, 10)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search, sort: sortBy })} />
+        <DataTable columns={dashboardColumns} data={sortedUsers.slice(0, 10)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
 
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-slate-400">View All details at once?</span>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import DataTable from '@/components/ui/data-table';
 import Button from '@/components/Button.jsx';
 import { ORG } from '@/config/constants';
-import { campaignsApi, listOf } from '@/lib/api';
+import { campaignsApi, listOf, metaOf } from '@/lib/api';
 
 function fmtDate(iso) {
   try {
@@ -28,26 +28,41 @@ function mapCampaignRow(c) {
   };
 }
 
-const TOTAL_PAGES = 10;
+const PAGE_SIZE = 10;
 
 export default function Campaigns() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState([]);
+  // The pager used to be hardcoded to "Page n of 10" and changing it refetched
+  // nothing, so it paged through a table that never moved. It now drives the
+  // request and reads its page count off the response's `meta`.
+  const [meta, setMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback((p) => {
+    setLoading(true);
+    setError(null);
+    return campaignsApi
+      .list({ page: p, limit: PAGE_SIZE })
+      .then((res) => {
+        setRows(listOf(res).map(mapCampaignRow));
+        setMeta(metaOf(res, PAGE_SIZE));
+      })
+      .catch((err) => setError(err.message || 'Could not load campaigns'))
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    campaignsApi
-      .list({ limit: 50 })
-      .then((res) => {
-        const items = listOf(res).map(mapCampaignRow);
-        if (alive) setRows(items);
-      })
-      .catch((err) => console.warn('campaigns', err.message));
+    load(page).then(() => {
+      if (!alive) return;
+    });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [load, page]);
 
   const columns = [
     { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800">{v}</span> },
@@ -66,6 +81,8 @@ export default function Campaigns() {
     },
   ];
 
+  const totalPages = Math.max(1, meta.totalPages || 1);
+
   return (
     <div className="p-1">
       <header className="mb-6">
@@ -75,32 +92,41 @@ export default function Campaigns() {
         </p>
       </header>
 
-      <DataTable columns={columns} data={rows} />
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={loading}
+        error={error}
+        onRetry={() => load(page)}
+        emptyMessage="No campaigns yet"
+      />
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between mt-4">
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
+      {/* Pagination — hidden when everything fits on one page. */}
+      {!error && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
 
-        <span className="text-sm text-slate-500">
-          Page {page} of {TOTAL_PAGES}
-        </span>
+          <span className="text-sm text-slate-500">
+            Page {page} of {totalPages}
+          </span>
 
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.min(TOTAL_PAGES, p + 1))}
-          disabled={page === TOTAL_PAGES}
-          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages || loading}
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,9 @@ function prettySize(bytes) {
 
 export default function MyDetailsPanel() {
   const [form, setForm] = useState({ fullName: '', phone: '', email: '' });
+  // The refresh from GET /users/me used to console.warn on failure, leaving
+  // whatever was cached at login on screen as though it were current.
+  const [staleWarning, setStaleWarning] = useState(null);
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -44,7 +47,10 @@ export default function MyDetailsPanel() {
           email: me.email || '',
         });
       })
-      .catch((err) => console.warn('me', err.message));
+      .catch((err) => {
+        if (!alive) return;
+        setStaleWarning(err.message || 'Could not refresh your details');
+      });
     return () => {
       alive = false;
     };
@@ -99,6 +105,12 @@ export default function MyDetailsPanel() {
   return (
     <div>
       <PanelHeader title="Personal Info" subtitle="Update your photo and personal details" />
+
+      {staleWarning && (
+        <p role="alert" className="mb-4 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-800">
+          Showing your saved details — we couldn&apos;t refresh them from the server ({staleWarning}).
+        </p>
+      )}
 
       <p className="text-sm font-semibold text-slate-700 mb-2">Add Profile Picture</p>
       <input

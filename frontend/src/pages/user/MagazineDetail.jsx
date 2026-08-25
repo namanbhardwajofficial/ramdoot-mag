@@ -16,6 +16,8 @@ export default function MagazineDetail() {
   const navigate = useNavigate();
   const [mag, setMag] = useState(null);
   const [error, setError] = useState("");
+  const [opening, setOpening] = useState(false);
+  const [readError, setReadError] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -28,6 +30,36 @@ export default function MagazineDetail() {
       alive = false;
     };
   }, [id]);
+
+  /**
+   * "Read Magazine" used to be a plain <a> straight to `pdfUrl`, which meant
+   * `GET /magazines/:id/read` was never called and `readsCount` never moved —
+   * which is why every magazine's Performance tab reports 0 reads. The endpoint
+   * resolves the PDF *and* records the read, so it has to be the way in.
+   *
+   * The window is opened before the await: a `window.open` that happens after
+   * an async hop is not attributable to the click any more and gets blocked as
+   * a popup. So we open it first and then point it at whatever comes back.
+   */
+  async function handleRead() {
+    if (opening) return;
+    setOpening(true);
+    setReadError("");
+    const tab = window.open("", "_blank", "noopener,noreferrer");
+    try {
+      const res = await magazinesApi.read(id);
+      // Fall back to the record's own pdfUrl if the endpoint answers without one.
+      const href = asset(res?.pdfUrl || res?.url) || asset(mag?.pdfUrl);
+      if (!href) throw new Error("This magazine has no readable file yet.");
+      if (tab) tab.location = href;
+      else window.location.assign(href);
+    } catch (err) {
+      if (tab) tab.close();
+      setReadError(err.message || "Could not open this magazine.");
+    } finally {
+      setOpening(false);
+    }
+  }
 
   if (error) {
     return <div className="p-6 text-sm text-red-500">Could not load this magazine: {error}</div>;
@@ -70,9 +102,10 @@ export default function MagazineDetail() {
 
           <div className="mt-6">
             {pdfHref ? (
-              <a href={pdfHref} target="_blank" rel="noreferrer">
-                <Button text="Read Magazine" />
-              </a>
+              <>
+                <Button text="Read Magazine" handler={handleRead} loading={opening} />
+                {readError && <p className="mt-2 text-sm text-red-600">{readError}</p>}
+              </>
             ) : (
               <p className="text-sm text-slate-400">This magazine has no readable file yet.</p>
             )}

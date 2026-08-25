@@ -1,202 +1,252 @@
-# Frontend issues — full audit
+# Frontend issues — audit and remediation
 
-Swept **2026-08-25** against the deployed backend (`13.204.191.64:3000`, 61 routes).
-Every item below was verified by running the app, not read off the code. Routes
-were rendered headless per role; buttons and API wiring were scanned across all
-of `src/` and then hand-checked to strip false positives.
+Audited **2026-08-25**, then fixed the same day. Everything below was verified by
+running the app against the deployed backend (`13.204.191.64:3000`), not read off
+the code: routes rendered headless per role, controls clicked through a
+same-origin driver, and API behaviour confirmed with live calls.
 
-**Route health:** all 20 routes render. No crashes, no stuck spinners, no 404s
-except the intended catch-all. The problems are inside the pages, not the routing.
+**Route health:** all 20 routes render for every role. No crashes, no stuck
+spinners, no unintended 404s. `npm run build` passes.
 
 ---
 
-## 1. 🔴 Blockers
+## 1. What was fixed
 
-### 1.1 The influencer role cannot log in at all
+### 1.1 🔴 The influencer role could not log in at all — frontend side done
 
-`arun@example.com` has 2FA enabled server-side, and login now enforces it:
+`arun@example.com` has 2FA enabled and login enforces it, but `authApi.login`
+only ever sent `{ email, password, rememberMe }`. The form dead-ended on
+"2FA token required" with nowhere to type a code.
+
+The login form now has a second step. It appears when the backend asks for a
+code, keeps the credentials, strips non-digits, requires six of them, and sends
+`totpToken` through. Driven end to end headless:
 
 ```
-POST /auth/login {"email":"arun@example.com","password":"Admin@123"}
--> 401 {"message":"2FA token required"}
+STEP1 email input: true | password input: true
+STEP2 totp field appeared: true
+STEP2 message: This account is protected by two-factor authentication…
+STEP2 after typing "abc12", value = "12"
+STEP2 verify disabled with 6 digits: false
+STEP3 still on totp step: true
+STEP3 message: Invalid Base32 string: Unknown letter "1"…
+STEP4 back on password form: true
 ```
 
-`authApi.login` sends only `{ email, password, rememberMe }`. The login DTO
-accepts `totpToken` and we never send it, so **there is no way to sign in as that
-influencer through the UI** — the form shows "2FA token required" and offers
-nothing to type the code into. The entire `/influencer/*` area is unreachable for
-this account.
+That last message is the point: **the request now reaches TOTP verification.**
+The account still cannot log in, but no longer for a frontend reason — its seeded
+`twoFactorSecret` is the literal string `"123456"`, which is not valid Base32.
+See `BACKEND_GAPS.md` #21. `/influencer/*` stays untestable end to end until the
+backend reseeds that secret.
 
-This is the lockout flagged before the 2FA panels were re-enabled; it is no longer
-hypothetical, it is live on a seeded account.
+Two things came along with it: the password field's eye icon was decorative and
+now actually reveals the password, and the form submits on Enter.
 
-**Fix:** add a TOTP step to the login form and pass `totpToken` through
-`authApi.login`. Until then, do **not** flip `TWO_FACTOR_ENABLED`
-(`components/settings/SecurityPanel.jsx:13`,
-`components/user/settings/SecurityPanel.jsx:20`) — any user who enables 2FA locks
-themselves out the same way.
+### 1.2 🟠 Dead controls — 32 of them
 
-*Silver lining: this is proof that 2FA enforcement on login works, which was
-previously unverified.*
+Every control that looked clickable and did nothing is now either wired or gone.
+Nothing was left inert.
 
-### 1.2 Backend has no TLS
+**Wired to something real:**
 
-Unchanged and still the hard launch blocker. Serving the frontend over HTTPS makes
-**every** API call fail as mixed content. Tokens and passwords currently travel in
-clear. Needs a certificate and reverse proxy, then `VITE_BACKEND_URL` moves to
-`https://`.
-
-### 1.3 Credential leak on a public endpoint
-
-`GET /magazines` (unauthenticated) returns `createdBy` as a full user entity
-including `passwordHash` and `twoFactorSecret`. See `BACKEND_GAPS.md` #17. The
-frontend now discards the object, which limits our exposure but does not fix the
-leak. **The admin password and 2FA secret should be rotated.**
-
----
-
-## 2. 🟠 Dead controls — buttons that do nothing when clicked
-
-Verified individually; multi-line false positives removed.
-
-### 2.1 Table row actions (highest impact)
-
-`pages/admin/influencer-campaigns.jsx` — only the eye/view icon works:
-
-| Line | Control | Table |
+| Where | Control | Now does |
 |---|---|---|
-| 91 | Delete (trash) | Influencers |
-| 92 | Edit (pen) | Influencers |
-| 112 | Restrict (circle-slash) | Campaigns |
-| 115 | Edit (pen) | Campaigns |
+| `ui/toolbar.jsx` (5 admin pages) | "Sort by" | Real sort (see below) |
+| `admin/payments.jsx` | Export ×2 | Downloads a CSV of exactly what is on screen |
+| `admin/payments.jsx` | "View Report" | Downloads the payments report (relabelled "Download Report") |
+| `admin/AdminDashboard.jsx` | Create Campaigns | Opens a real create-campaign form |
+| `admin/AdminDashboard.jsx` | Preview / View Details | Opens the PDF / goes to Publications |
+| `admin/AdminDashboard.jsx` | View Details, View deposits | Navigate to Users / Payments |
+| `admin/magazines.jsx` | Filters, Sort by, Search | All three now filter the catalogue |
+| `admin/publications.jsx` | Live / Draft count rows | Open the list filtered to that status |
+| `influencers/InfluencerDetail.jsx` | Create Campaigns, View Campaign, its Toolbar | Create form, campaign drawer, real filter/search/sort |
+| `influencer-campaigns.jsx` | Row trash icon | Blocks the influencer (with a confirm) |
+| `influencer-campaigns.jsx` | Row restrict icon | Suspends — or reactivates, depending on status |
+| `publications/EditMagazineForm.jsx` | Both "Add New Magazine" uploads | Real file pickers → `POST /magazines/:id/upload` |
+| `pages/Help.jsx` | Search box, Get in Touch | Filters the FAQs, opens support |
+| `nav.jsx` | Mobile notification bell | The real `NotificationBell` with its badge and drawer |
+| `influencers/Earnings.jsx` | All / 1 Month / 6 Month / 1 Year | Actually narrow both tables |
+| `InfluencerDashboard.jsx` | Live Links / Promo Code rows | Open the campaigns list |
+| `ui/search-bar.jsx` | The whole global search | Filters and jumps to the pages the role can reach |
+| `users/UserDetailView.jsx` | Magazine row eye icon | Opens Publications |
+| 11 × "Connect Support" / "Connect Us" | across drawers, modals, Help | One shared `<SupportLink>` |
 
-These look identical to the working view button, so they read as functional.
+**Removed instead, because the backend has nothing behind them:**
 
-### 2.2 "Sort by" — on every admin list page
+- Campaign row **edit** and **restrict** icons — `PATCH`/`DELETE /campaigns/:id`
+  are both 404 (`BACKEND_GAPS.md` #23).
+- Influencer row **pen** icon and the **Edit** button on the influencer detail
+  view — there is no `PATCH /users/:id`, only a status change (#24).
+- The **period dropdown** on ~20 stat cards ("This Month / This Week / Today /
+  This Year"). It had a `defaultValue` and no handler. `StatCard` now renders it
+  only when a caller passes `onPeriodChange`, so it cannot reappear inert.
+- The **"This Month" pill** on the influencer dashboard cards — a static div with
+  a chevron. `GET /earnings` returns lifetime totals only; the caption now says
+  "Lifetime" and "Paid out" plainly.
+- The fake **PDF viewer toolbar** (zoom −/+, download, ⋯, a hardcoded "1 / 2" and
+  "100%") — the whole `magazinesdetails.jsx` component was unreferenced, and
+  `/user/magazines/:id` renders `pages/user/MagazineDetail.jsx` instead. Deleted.
 
-`components/ui/toolbar.jsx:32` is a button with no handler, and `Toolbar` is used
-on users, subscriptions, payments, publications and influencer-campaigns. One dead
-control, five pages. `pages/admin/magazines.jsx:19-20` has its own unwired
-**Filters** and **Sort by** pair, plus a search input with no state binding.
+The **global search in the top bar** deserves its own note: it appeared on every
+admin and influencer page, its `query` state fed nothing, and its dropdown listed
+two fabricated "recent" items — a made-up card number
+(`Atharv Kelwadkar Card No ********645`) and a made-up email address — above four
+handler-less buttons. There is no search endpoint, so it is now a navigator: it
+filters the pages the signed-in role can actually reach, supports arrow keys and
+Enter, and goes there. The invented personal data is gone.
 
-### 2.3 Individually dead buttons
+**Dead links:** the footer's seven `href="#"` social icons now read real URLs
+from `SOCIAL_LINKS` and an icon with no URL is not rendered. The payouts table's
+"Campaign Link" was an `<a href="#">` around a permanent dash — `/admin/payouts`
+does not join the campaign, so it is plain text until it does. `AboutUs`'s
+"View Details" points at the foundation's site.
 
-| File | Line | Label |
-|---|---|---|
-| `pages/admin/AdminDashboard.jsx` | 188, 189 | Preview, View Details (magazine rows) |
-| `pages/admin/AdminDashboard.jsx` | 228, 303, 312 | Create Campaigns, View Details, View deposits |
-| `pages/admin/payments.jsx` | 109 | View Report |
-| `components/influencers/InfluencerDetail.jsx` | 77 | View Campaign |
-| `components/influencers/InfluencerDetail.jsx` | 271 | Edit |
-| `pages/Help.jsx` | 98 | Get in Touch |
-| `components/landing/AboutUs.jsx` | 80 | View Details |
-| `components/influencers/PayoutRequestedDrawer.jsx` | 16 | Connect Us |
-| `components/influencers/PromoCodeDrawer.jsx` | 83 | Connect Support |
-| `components/influencers/ShareCampaignDrawer.jsx` | 51 | Connect Support |
-| `pages/influencers/RequestPayout.jsx` | 345 | Connect Us |
+A full re-scan finds **zero** `href="#"`, zero no-op handlers, and zero
+handler-less buttons across `src/`.
 
-The four "Connect Us / Connect Support" buttons need a destination — support email,
-form, or WhatsApp. That is a product decision, like the donation CTAs were.
+### 1.3 Sorting, export, pagination
 
-### 2.4 Links that go nowhere
+- **`src/lib/sort.js`** — client-side sort for the admin tables. It has to be
+  client-side: `GET /users?sortBy=createdAt&sortOrder=desc` returns
+  `400 ["property sortBy should not exist"]` (#22). Honest today because these
+  pages fetch `limit: 100` unpaginated; the file says so, and says what breaks if
+  server-side paging lands.
+- **`src/lib/csv.js`** — RFC 4180 export with a UTF-8 BOM so Excel renders the
+  rupee sign. Verified: `payments-2026-08-25.csv`, 244 bytes, header + 2 real rows.
+- **Influencer Campaigns pagination** was hardcoded `Page n of 10` and refetched
+  nothing — it paged through a table that never moved. It now drives the request
+  and reads its page count from the response's `meta`, and hides itself when
+  everything fits on one page.
 
-- `components/landing/Footer.jsx:63` — every social icon is `href="#"`. Needs the
-  real social URLs or the icons should come out.
-- `pages/admin/payments.jsx:72` — "Campaign Link" column renders `href="#"`.
-  `/admin/payouts` does not join the campaign, so there is no name or id to link
-  to (`BACKEND_GAPS.md` #16).
+### 1.4 🟠 Fabricated data removed
 
-### 2.5 Inert period selector
+- `Earnings.jsx` — `commissionTrend` / `payoutTrend`, two literal 12-point arrays
+  feeding AreaCharts under real balances. Identical for every influencer and
+  every balance, including zero. **Charts removed**; the numbers stand alone.
+- `RequestPayout.jsx` — one shared literal array under both MiniStats. Same
+  treatment.
+- The **hardcoded date range** "Jan 10, 2025 – Jan 16, 2025" on Earnings is now
+  computed from the selected period.
+- **Confident zeros:** `Earnings.jsx`, `InfluencerDashboard.jsx` and
+  `RequestPayout.jsx` all rendered `₹ 0` when a fetch failed, asserting a real
+  balance of zero. They render a dash now, as the admin cards already did.
+- The influencer dashboard's magazine cards showed a **blank grey square** even
+  when a cover existed. They render the cover.
 
-`components/ui/stat-card.jsx:76` — the "This Month / This Week / Today / This Year"
-dropdown on every stat card has `defaultValue` and no `onChange`. Changing it does
-nothing. It appears on ~20 cards and implies filtering the app cannot do; the
-endpoints take `from`/`to` (payments) and `days` (revenue), so it *could* be wired.
+### 1.5 🟡 Silent failures — 22 → 0
 
----
+Every remaining `console.warn` catch now surfaces to the user. The pattern was
+always the same and always misleading: a failed request rendered as a confident
+factual claim.
 
-## 3. 🟠 Fabricated data still on screen
-
-### 3.1 Hardcoded sparklines on influencer pages
-
-- `pages/influencers/Earnings.jsx:47-48` — `commissionTrend` and `payoutTrend` are
-  literal arrays (`[20, 28, 24, 36, …]`) feeding the charts on the Commission
-  Earning and Payout Available cards. **The number is real, the trend beside it is
-  invented** — the same defect fixed in `MiniChart`.
-- `pages/influencers/RequestPayout.jsx:9` — `trend = [10, 14, 12, 20, …]` feeding
-  an `AreaChart`.
-
-No per-influencer time series exists, so the honest fix is to drop these charts
-until one does (or add `GET /earnings/timeseries`).
-
-### 3.2 Confident zeros on failure
-
-`Earnings.jsx:186-187` and `InfluencerDashboard.jsx:80,84` render `'₹ 0'` when the
-fetch fails, asserting a real balance of zero. Should be a dash, as the admin cards
-now are.
-
----
-
-## 4. 🟡 Errors still invisible — 22 handlers
-
-Down from 50. All admin screens are done; what remains are page-local fetches that
-never reach a hook, so each needs its own error state.
-
-**Influencer pages (11):** `Campaigns.jsx:46`, `Earnings.jsx:98,105,112`,
-`InfluencerDashboard.jsx:40,44,56`, `CampaignDetails.jsx:109`,
-`RequestPayout.jsx:148,160`, `RequestedPayout.jsx:39`
-**User pages (3):** `Home.jsx:25`, `Magazines.jsx:26`, `Subscriptions.jsx:57`
-**Settings (4):** `BillingsPanel.jsx:97,103`, both `MyDetailsPanel` (`:47`, `:38`)
-**Other (4):** `notification-bell.jsx:35,46`, `InfluencerDetail.jsx:60`,
-`useSecurity.js:123`
-
-Roughly half a day. Nothing blocks it.
-
----
-
-## 5. 🟡 Wired but unreachable / unused
-
-| Item | Problem |
+| Was silently claiming | Where |
 |---|---|
-| `magazinesApi.read` | Never called. `MagazineDetail.jsx:73` links straight to `pdfUrl`, so **`readsCount` never increments** — which is why the magazine Performance tab reads 0. Route the button through `/magazines/:id/read`. |
-| `magazinesApi.versions` | Endpoint wired, but `MagazineDetailsDrawer` has no Versions tab (`TAB_LIST` is Overview/Performance/Financials/Actions). Backend ships it as a stub anyway. |
-| `authApi.verifyEmail` | No UI calls it. Signup step 2 already verifies, so this is probably dead — confirm and delete. |
-| `paymentsApi.record` | No caller since checkout moved to `create-order` + webhook. Likely dead. |
-| `src/data/userMagazines.js` | Mock catalogue, no longer imported anywhere. Delete. |
+| "You don't have an active subscription" / "No payments yet" | `user/settings/BillingsPanel` |
+| "No active sessions" on the Security panel | `hooks/useSecurity` |
+| "You're all caught up" in Notifications | `ui/notification-bell` |
+| "No subscription plans are available right now" | `user/Subscriptions` |
+| An empty magazine catalogue | `user/Home`, `user/Magazines` |
+| A campaign with no activity | `influencers/CampaignDetails` |
+| Empty earnings, campaigns, payouts, bank accounts | `influencers/*` |
+| Stale profile details shown as current | both `MyDetailsPanel`s |
+| "no payout accounts" — inviting re-entry of saved bank details | `settings/PayoutPanel` |
+
+Two cases got a softer treatment on purpose: a failed `/users/me` refresh shows
+an amber "showing your saved details" banner rather than replacing a usable form,
+and a failed full-user fetch toasts "showing partial details" rather than
+blanking a detail view that still has real list data in it.
+
+New shared hook `src/hooks/useAsync.js` carries loading / error / retry with
+stale-response guarding, so this pattern is harder to reintroduce.
+
+### 1.6 🟡 Wired but unused
+
+- **`magazinesApi.read` is now called.** "Read Magazine" linked straight to
+  `pdfUrl`, so `GET /magazines/:id/read` never ran and **`readsCount` never
+  incremented** — which is why every magazine's Performance tab reads 0. It goes
+  through the endpoint now, opening the tab before the await so it is not
+  swallowed as a popup.
+- Deleted `src/data/userMagazines.js` (mock catalogue, unimported) and
+  `src/components/magazinesdetails.jsx` (unreferenced duplicate viewer).
+- Removed `authApi.verifyEmail` and `paymentsApi.record` — no callers, and
+  recording a payment client-side would let anyone POST themselves a successful
+  one. Dropped `magazinesApi.versions`: the endpoint is a stub, so the tab it was
+  "kept wired" for could only ever render its own not-implemented note.
+
+### 1.7 Bugs found while fixing the above
+
+- **`GET /campaigns` leaks `passwordHash` and `twoFactorSecret`** through the
+  `influencer` join, exactly like `/magazines` does. Admin-guarded rather than
+  public, so less severe — but it confirms the relation is widening across
+  endpoints. Mitigated frontend-side (`mapCampaign` drops the object) and filed
+  as `BACKEND_GAPS.md` #20.
+- **`PUBLICATION_STATUSES` had no `DRAFT`**, so the Publications filter could not
+  select the status most magazines are actually in. Added.
+- **Payment and payout rows never had a user id** — it lives on the nested
+  `user`, and the mapper never read it, so every "User & ID" cell rendered a bare
+  `#`. Found because the CSV export had an empty column.
 
 ---
 
-## 6. 🟡 Untestable until the backend moves
+## 2. Still open — not fixable from the frontend
+
+### 2.1 🔴 Backend has no TLS
+
+Unchanged, still the hard launch blocker. Serving the frontend over HTTPS makes
+**every** API call fail as mixed content. Tokens and passwords travel in clear.
+Needs a certificate and reverse proxy, then `VITE_BACKEND_URL` moves to `https://`.
+
+### 2.2 🔴 Credential leak, still live
+
+Re-checked today — `GET /magazines` unauthenticated still returns
+`createdBy.passwordHash` and `createdBy.twoFactorSecret`, and `/campaigns` does
+the same via `influencer`. **The admin password and 2FA secret should be
+rotated.** `BACKEND_GAPS.md` #17 and #20.
+
+### 2.3 🔴 The influencer account is locked out server-side
+
+`BACKEND_GAPS.md` #21. Frontend work is done and verified; the seeded
+`twoFactorSecret` is invalid Base32. Until it is reseeded, `/influencer/*` cannot
+be exercised as that role, so that area has not been audited under real data.
+
+Related: do **not** enable 2FA on a live account through the settings panel until
+you can confirm the generator is being used. New secrets are valid Base32
+(verified 2026-08-23); the seed was never migrated.
+
+### 2.4 🟡 Untestable until the backend moves
 
 - **Signup and password reset** — the deployed mailer is unconfigured
   (`"Email service is not configured"`), so no OTP is delivered. Both flows are
-  dead ends end to end. Blocks a resend-code button too.
+  dead ends end to end.
 - **Razorpay checkout** — keys unset; `create-order` returns
   `500 key_id is mandatory`. The frontend flow is complete and fails with a clear
   message rather than granting anything.
-- **`BillingsPanel` empty state** — needs a fresh account, which needs working OTP.
-- **Magazine upload → read round trip** — the 404 path bug is fixed, but no PDF has
-  been uploaded, so no magazine is readable and every cover is a placeholder.
-- **Influencer area** — unverifiable at all right now, see §1.1.
+- **Magazine upload → read round trip** — the upload UI now exists and the 404
+  path bug is fixed, but no PDF has been uploaded yet, so no magazine is readable
+  and every cover is still a placeholder.
 
 ---
 
-## 7. Deployment checklist
+## 3. Deployment checklist
 
-- [ ] `VITE_BACKEND_URL` set to an **https** origin (blocked by §1.2)
+- [ ] `VITE_BACKEND_URL` set to an **https** origin (blocked by §2.1)
 - [ ] `VITE_RAZORPAY_KEY_ID` set
-- [ ] Rotate admin password + 2FA secret after §1.3 is fixed
-- [ ] Upload real magazine PDFs and covers
-- [ ] Decide destinations for the four "Connect Support" buttons and the footer socials
-- [ ] `npm run build` — currently passes
+- [ ] `VITE_SUPPORT_EMAIL` set — without it every "Connect Support" control falls
+      back to `ramdootrestores.in` rather than a mailbox
+- [ ] `VITE_SOCIAL_FACEBOOK` / `_INSTAGRAM` / `_TWITTER` / `_YOUTUBE` /
+      `_LINKEDIN` — unset icons are hidden, so the footer is simply shorter
+- [ ] Rotate admin password + 2FA secret after §2.2 is fixed
+- [ ] Upload real magazine PDFs and covers (the admin UI can do this now)
+- [ ] `npm run build` — passes
 
 ---
 
 ## Verified working
 
 Admin dashboard (real counts, 12-month revenue chart, real recent payments, audit
-log) · admin users/subscriptions/publications/payments incl. platform-wide totals ·
-influencer Audience and Payments tabs · campaign financials · magazine performance
-and financials · login → role redirect · token refresh with rotation · search and
-filters on admin tables · inline error + retry on every admin data load · donation
-CTAs → ramdootrestores.in · 404 catch-all.
+log) · admin users / subscriptions / publications / payments incl. platform-wide
+totals · sort and CSV export on the admin tables · influencer Audience and
+Payments tabs · campaign financials · magazine performance and financials ·
+login → role redirect · 2FA code step → `totpToken` · token refresh with rotation
+· search and filters on every admin table · inline error + retry on every data
+load · donation CTAs → ramdootrestores.in · 404 catch-all.

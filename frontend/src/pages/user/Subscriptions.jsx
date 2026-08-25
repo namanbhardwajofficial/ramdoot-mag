@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/Button.jsx";
 import { ORG } from "@/config/constants";
 import { CheckCircleIcon } from "@/components/ui/icons";
+import ErrorState from "@/components/ui/error-state";
 import { toastSuccess, toastError } from "@/lib/confirm";
 import { subscriptionsApi, paymentsApi, listOf } from "@/lib/api";
 import { useRazorpay } from "@/components/RazorpayButton";
@@ -47,37 +48,49 @@ export default function Subscriptions() {
   const [mySubs, setMySubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pendingPlanId, setPendingPlanId] = useState(null);
+  // A failed plans load used to fire a toast and leave "No subscription plans
+  // are available right now" on screen — a statement about the catalogue, when
+  // the truth was that the request failed. A failed `mine()` was worse: it only
+  // console.warn'd, and a plan the user already owns would show "Get this plan"
+  // and invite them to pay for it twice.
+  const [planError, setPlanError] = useState(null);
+  const [mineError, setMineError] = useState(null);
   const { pay } = useRazorpay();
 
   const loadMine = useCallback(
     () =>
       subscriptionsApi
         .mine()
-        .then((res) => setMySubs(listOf(res)))
-        .catch((err) => console.warn("mine", err.message)),
+        .then((res) => {
+          setMySubs(listOf(res));
+          setMineError(null);
+        })
+        .catch((err) => setMineError(err.message || "Could not load your subscriptions")),
+    [],
+  );
+
+  const loadPlans = useCallback(
+    () =>
+      subscriptionsApi
+        .plans()
+        .then((res) => {
+          setPlans(listOf(res));
+          setPlanError(null);
+        })
+        .catch((err) => setPlanError(err.message || "Could not load subscription plans")),
     [],
   );
 
   useEffect(() => {
     let alive = true;
-    Promise.all([
-      subscriptionsApi
-        .plans()
-        .then((res) => {
-          if (alive) setPlans(listOf(res));
-        })
-        .catch((err) => {
-          console.warn("plans", err.message);
-          if (alive) toastError("Could not load subscription plans");
-        }),
-      loadMine(),
-    ]).finally(() => {
+    setLoading(true);
+    Promise.all([loadPlans(), loadMine()]).finally(() => {
       if (alive) setLoading(false);
     });
     return () => {
       alive = false;
     };
-  }, [loadMine]);
+  }, [loadPlans, loadMine]);
 
   const activePlanIds = new Set(
     mySubs
@@ -163,7 +176,21 @@ export default function Subscriptions() {
         </p>
       </div>
 
-      {plans.length === 0 ? (
+      {mineError && (
+        <p role="alert" className="mt-6 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-800">
+          We couldn&apos;t check which plans you already have ({mineError}). Any plan you
+          are already subscribed to may still show &ldquo;Get this plan&rdquo; below.{' '}
+          <button type="button" onClick={loadMine} className="font-medium underline underline-offset-2">
+            Try again
+          </button>
+        </p>
+      )}
+
+      {planError ? (
+        <ErrorState message={planError} onRetry={loadPlans} className="mt-8" />
+      ) : loading ? (
+        <p className="mt-8 text-center text-sm text-slate-400">Loading plans&hellip;</p>
+      ) : plans.length === 0 ? (
         <p className="mt-8 text-center text-sm text-slate-400">
           No subscription plans are available right now.
         </p>

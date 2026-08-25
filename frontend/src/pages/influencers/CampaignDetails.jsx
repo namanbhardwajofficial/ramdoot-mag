@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router';
 import {
   Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -7,6 +7,7 @@ import { FaInstagram, FaWhatsapp } from 'react-icons/fa6';
 import Button from '@/components/Button.jsx';
 import PromoCodeDrawer from '@/components/influencers/PromoCodeDrawer';
 import ShareCampaignDrawer from '@/components/influencers/ShareCampaignDrawer';
+import ErrorState from '@/components/ui/error-state';
 import { toastSuccess } from '@/lib/confirm';
 import { campaignsApi, trackingUrl } from '@/lib/api';
 import { ORG } from '@/config/constants';
@@ -92,25 +93,31 @@ export default function CampaignDetails() {
   // 'create' | 'edit' | null (closed)
   const [promoDrawer, setPromoDrawer] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
+  // The page's only data call used to console.warn on failure, leaving a
+  // campaign titled "Campaign" with an empty chart and zeroed stats — which
+  // reads as a real campaign that has had no activity.
+  const [loadError, setLoadError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    let alive = true;
-    campaignsApi
+  const load = useCallback(() => {
+    if (!id) return Promise.resolve();
+    setLoading(true);
+    setLoadError(null);
+    return campaignsApi
       .overview(id)
       .then((o) => {
-        if (!alive || !o) return;
+        if (!o) return;
         setOverview(o);
         // Campaigns are created with a promo code; surface it if present.
         if (o.promoCode) {
           setPromo((prev) => prev ?? { code: o.promoCode, discount: '', used: o.stats?.totalConversions ?? 0 });
         }
       })
-      .catch((err) => console.warn('campaign overview', err.message));
-    return () => {
-      alive = false;
-    };
+      .catch((err) => setLoadError(err.message || 'Could not load this campaign'))
+      .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => { load(); }, [load]);
 
   function handlePromoSubmit({ code, discount }) {
     setPromo((prev) => ({ used: prev?.used ?? 1213, ...prev, code, discount }));
@@ -121,6 +128,18 @@ export default function CampaignDetails() {
     setPromo(null);
     setPromoDrawer(null);
     toastSuccess('Promo code deleted');
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-1">
+        <ErrorState message={loadError} onRetry={load} className="mt-6" />
+      </div>
+    );
+  }
+
+  if (loading && !overview) {
+    return <div className="p-6 text-sm text-slate-400">Loading campaign&hellip;</div>;
   }
 
   return (

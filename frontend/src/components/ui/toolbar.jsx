@@ -5,6 +5,12 @@ export default function Toolbar({
   search,
   onSearchChange,
   onExport,
+  // Sorting. `sortOptions` is [{ value: 'name:asc', label: 'Name (A–Z)' }, …]
+  // and the control only renders when a page actually passes some — the button
+  // used to be unconditional and had no handler behind it anywhere.
+  sortOptions = [],
+  sort = '',
+  onSortChange,
   children,
 }) {
   return (
@@ -29,9 +35,24 @@ export default function Toolbar({
         </div>
       )}
 
-      <button className="px-3 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-        Sort by
-      </button>
+      {sortOptions.length > 0 && onSortChange && (
+        <div className="inline-flex items-center gap-1 border rounded-lg px-3 py-2 text-sm">
+          <span className="text-slate-500">Sort by</span>
+          <select
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value)}
+            aria-label="Sort by"
+            className="bg-transparent focus:outline-none text-sm cursor-pointer"
+          >
+            <option value="">Default</option>
+            {sortOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="relative">
         <svg

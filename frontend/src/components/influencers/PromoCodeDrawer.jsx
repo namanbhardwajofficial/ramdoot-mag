@@ -3,6 +3,7 @@ import Drawer from '@/components/ui/drawer';
 import Button from '@/components/Button.jsx';
 import { TrashIcon } from '@/components/ui/icons';
 import { confirmDelete } from '@/lib/confirm';
+import SupportLink from '@/components/SupportLink';
 
 function CheckBadge() {
   return (
@@ -80,9 +81,7 @@ export default function PromoCodeDrawer({
       )}
       <p className="text-center text-xs text-slate-400">
         Trouble in getting code?{' '}
-        <button type="button" className="font-semibold text-slate-600 hover:text-slate-900">
-          Connect Support
-        </button>
+        <SupportLink className="font-semibold text-slate-600 hover:text-slate-900">Connect Support</SupportLink>
       </p>
     </div>
   );

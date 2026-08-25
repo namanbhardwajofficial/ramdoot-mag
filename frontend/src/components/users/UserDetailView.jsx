@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import StatusBadge from '@/components/ui/status-badge';
 import { EyeIcon } from '@/components/ui/icons';
 
@@ -44,6 +45,7 @@ function BasicInfoTab({ user }) {
 }
 
 function MagazinesTab({ user }) {
+  const navigate = useNavigate();
   const magazines = user.magazines || [];
   return (
     <div className="mt-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -79,7 +81,14 @@ function MagazinesTab({ user }) {
               <td className="px-4 py-4 text-slate-600">{formatDate(mag.purchasedOn)}</td>
               <td className="px-4 py-4 text-slate-600">{mag.reads?.toLocaleString('en-IN') ?? '—'}</td>
               <td className="px-4 py-4">
-                <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100">
+                {/* Had no handler. There is no admin magazine-detail route —
+                    the per-magazine drawer lives on the Publications screen —
+                    so that is where this goes. */}
+                <button
+                  onClick={() => navigate('/admin/publications')}
+                  title="Open in Publications"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100"
+                >
                   <EyeIcon />
                 </button>
               </td>

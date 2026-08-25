@@ -1,3 +1,5 @@
+import { useState } from "react";
+import SupportLink from "@/components/SupportLink";
 import {
   SearchIcon,
   BellIcon,
@@ -44,6 +46,16 @@ const FAQS = [
 ];
 
 export default function Help() {
+  // The search box was an unbound <input> sitting above the FAQ grid — typing
+  // in it did nothing at all.
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const faqs = q
+    ? FAQS.filter(({ q: question, a }) =>
+        `${question} ${a}`.toLowerCase().includes(q),
+      )
+    : FAQS;
+
   return (
     <div className="mx-auto max-w-275">
       {/* Top bar: breadcrumb + search + notifications */}
@@ -63,7 +75,10 @@ export default function Help() {
           <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
+            aria-label="Search the FAQs"
             className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
           />
         </div>
@@ -71,17 +86,23 @@ export default function Help() {
 
       {/* FAQ grid */}
       <div className="mt-10 rounded-2xl bg-slate-50 p-6 sm:p-10 lg:p-12">
-        <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-          {FAQS.map(({ Icon, q, a }) => (
-            <div key={q}>
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white">
-                <Icon className="h-5 w-5 text-slate-700" strokeWidth={1.6} />
+        {faqs.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">
+            Nothing matches &ldquo;{query}&rdquo;. Try another word, or get in touch below.
+          </p>
+        ) : (
+          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {faqs.map(({ Icon, q: question, a }) => (
+              <div key={question}>
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white">
+                  <Icon className="h-5 w-5 text-slate-700" strokeWidth={1.6} />
+                </div>
+                <h3 className="mt-5 font-semibold text-slate-900">{question}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{a}</p>
               </div>
-              <h3 className="mt-5 font-semibold text-slate-900">{q}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{a}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Still have questions */}
@@ -95,13 +116,11 @@ export default function Help() {
             our friendly team.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-btn-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 sm:self-auto"
-        >
+        {/* Was a handler-less <button>. */}
+        <SupportLink className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-btn-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 sm:self-auto">
           Get in Touch
           <ChevronRightIcon className="h-4 w-4" />
-        </button>
+        </SupportLink>
       </div>
     </div>
   );

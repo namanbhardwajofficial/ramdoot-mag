@@ -14,9 +14,15 @@ function mapInfluencer(i) {
 }
 
 function mapCampaign(c) {
+  // GET /campaigns serialises the `influencer` relation as a full user entity —
+  // `passwordHash` and `twoFactorSecret` included (verified 2026-08-25, see
+  // BACKEND_GAPS.md #20). It is admin-guarded rather than public like the
+  // /magazines leak, but the fix is the same on our side: keep the display name
+  // and drop the object so those fields never enter component state.
+  const { influencer, ...rest } = c;
   return {
-    ...c,
-    influencerName: c.influencer?.fullName || '—',
+    ...rest,
+    influencerName: influencer?.fullName || '—',
     startingDate: c.startDate,
     totalClicks: c._count?.clickEvents ?? 0,
     clickConversion: c._count?.conversions ?? 0,
@@ -123,6 +129,26 @@ export default function useInfluencers() {
     [fetchInfluencers],
   );
 
+  // The only mutation the backend offers for another user is a status change:
+  // PATCH /users/:id/status, one of ACTIVE | SUSPENDED | BLOCKED | INACTIVE.
+  // There is no PATCH /users/:id and no DELETE, so "delete" here means BLOCKED
+  // (the same thing the Users page's trash icon does).
+  const blockInfluencer = useCallback(
+    async (id) => {
+      await usersApi.setStatus(id, 'BLOCKED');
+      await fetchInfluencers();
+    },
+    [fetchInfluencers],
+  );
+
+  const reactivateInfluencer = useCallback(
+    async (id) => {
+      await usersApi.setStatus(id, 'ACTIVE');
+      await fetchInfluencers();
+    },
+    [fetchInfluencers],
+  );
+
   return {
     influencers,
     campaigns,
@@ -139,5 +165,7 @@ export default function useInfluencers() {
     getCampaignFinancials,
     createCampaign,
     restrictInfluencer,
+    blockInfluencer,
+    reactivateInfluencer,
   };
 }

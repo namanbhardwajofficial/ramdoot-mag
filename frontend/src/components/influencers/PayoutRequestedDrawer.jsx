@@ -1,6 +1,7 @@
 import Drawer from '@/components/ui/drawer';
 import StatusBanner from '@/components/ui/status-banner';
 import Button from '@/components/Button.jsx';
+import SupportLink from '@/components/SupportLink';
 
 /**
  * Confirmation panel shown after a payout request is submitted. Mirrors the
@@ -13,9 +14,7 @@ export default function PayoutRequestedDrawer({ open, onClose, onViewStatus }) {
       <Button text="View Status" handler={onViewStatus} width="100%" />
       <p className="text-center text-xs text-slate-400">
         Trouble withdrawing funds?{' '}
-        <button type="button" className="font-semibold text-slate-600 hover:text-slate-900">
-          Connect Us
-        </button>
+        <SupportLink className="font-semibold text-slate-600 hover:text-slate-900">Connect Us</SupportLink>
       </p>
     </div>
   );

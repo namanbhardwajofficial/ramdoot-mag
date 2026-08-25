@@ -1,5 +1,6 @@
 import Modal from '@/components/ui/modal';
 import { ORG } from '@/config/constants';
+import SupportLink from '@/components/SupportLink';
 
 function Field({ label, value }) {
   return (
@@ -56,7 +57,7 @@ export default function PaymentFailedModal({ open, payment, onClose, onRetry }) 
 
         <p className="text-center text-xs text-slate-400 mt-3">
           Trouble in getting refund{' '}
-          <span className="font-medium text-slate-900">Connect Support</span>
+          <SupportLink>Connect Support</SupportLink>
         </p>
       </div>
     </Modal>

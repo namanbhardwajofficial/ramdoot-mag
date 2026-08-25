@@ -4,6 +4,16 @@ import StatCard, { StatValue } from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import DataTable from "@/components/ui/data-table";
 import Toolbar from "@/components/ui/toolbar";
+import { sortRows } from '@/lib/sort';
+
+const PUB_SORTS = [
+  { value: "title:asc", label: "Title (A–Z)" },
+  { value: "title:desc", label: "Title (Z–A)" },
+  { value: "publishedOn:desc", label: "Newest first" },
+  { value: "reads:desc", label: "Most read" },
+  { value: "revenue:desc", label: "Highest revenue" },
+  { value: "status:asc", label: "Status" },
+];
 import {
   EyeIcon,
   TrashIcon,
@@ -55,6 +65,8 @@ export default function Publications() {
   const [view, setView] = useState(VIEWS.DASHBOARD);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  // Backs the Toolbar's "Sort by", which had no handler at all before.
+  const [sortBy, setSortBy] = useState("");
 
   const [selectedPub, setSelectedPub] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -262,8 +274,11 @@ export default function Publications() {
           statusOptions={Object.values(PUBLICATION_STATUSES)}
           search={search}
           onSearchChange={setSearch}
+          sortOptions={PUB_SORTS}
+          sort={sortBy}
+          onSortChange={setSortBy}
         />
-        <DataTable columns={columns} data={publications} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
+        <DataTable columns={columns} data={sortRows(publications, sortBy)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
 
         <MagazineDetailsDrawer
           open={showDetails}
@@ -321,29 +336,40 @@ export default function Publications() {
           <span className="text-sm font-medium text-slate-700">
             Live Promo Code & Drafts
           </span>
+          {/* Both rows carried a chevron and were not clickable. They now open
+              the full list filtered to that status, which is what the chevron
+              was implying all along. */}
           <div className="mt-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
+            <button
+              type="button"
+              onClick={() => { setStatusFilter(PUBLICATION_STATUSES.LIVE); setView(VIEWS.LIST); }}
+              className="flex w-full items-center justify-between rounded-lg px-1 py-1 text-left hover:bg-slate-50"
+            >
+              <span>
                 <span className="text-xl font-bold text-slate-900">
                   <StatValue value={stats?.liveCount} />
                 </span>
                 <span className="text-sm text-slate-500 ml-2">
                   Live Magazines
                 </span>
-              </div>
+              </span>
               <ChevronRightIcon />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStatusFilter(PUBLICATION_STATUSES.DRAFT); setView(VIEWS.LIST); }}
+              className="flex w-full items-center justify-between rounded-lg px-1 py-1 text-left hover:bg-slate-50"
+            >
+              <span>
                 <span className="text-xl font-bold text-slate-900">
                   <StatValue value={stats?.draftCount} format={(n) => String(n).padStart(2, "0")} />
                 </span>
                 <span className="text-sm text-slate-500 ml-2">
                   Draft Magazines
                 </span>
-              </div>
+              </span>
               <ChevronRightIcon />
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -363,8 +389,11 @@ export default function Publications() {
           statusOptions={Object.values(PUBLICATION_STATUSES)}
           search={search}
           onSearchChange={setSearch}
+          sortOptions={PUB_SORTS}
+          sort={sortBy}
+          onSortChange={setSortBy}
         />
-        <DataTable columns={columns} data={publications} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
+        <DataTable columns={columns} data={sortRows(publications, sortBy)} loading={loading} error={error} onRetry={() => fetchAll({ status: statusFilter, search })} />
       </section>
 
       <MagazineDetailsDrawer

@@ -90,6 +90,98 @@ GET /admin/analytics/revenue-breakdown  -> { subscriptions, singleSales, payouts
 left it out.
 
 ---
+## 20. 🔴 `GET /campaigns` leaks password hashes and 2FA secrets too
+
+Same defect as #17, second endpoint. The `influencer` relation comes back as a
+full user entity:
+
+```
+$ curl -H "Authorization: Bearer <admin>" http://13.204.191.64:3000/api/v1/campaigns?limit=1
+
+"influencer": {
+  "email": "arun@example.com",
+  "passwordHash": "$2a$12$26YWzEfuA0hYx1ysqrbIXOaECn3Po3Ge./aHZO8U8LiivVvgguo06",
+  "twoFactorSecret": "123456",
+  ...
+}
+```
+
+This one is admin-guarded rather than `@Public()`, so it is less severe than #17 —
+but it confirms the relation is widening everywhere, not just on magazines. The
+fix in #17 (`@Exclude()` on the User entity, or an explicit `select` on each join)
+closes both at once, and every other endpoint that joins a user with it.
+
+Frontend mitigation shipped: `useInfluencers.mapCampaign` now drops the object and
+keeps only `fullName`, the same way `usePublications.mapPub` does.
+
+## 21. 🔴 The seeded influencer cannot log in — `twoFactorSecret` is the literal string "123456"
+
+`arun@example.com` has `isTwoFactorEnabled: true` and `twoFactorSecret: "123456"`.
+That is not Base32, so TOTP verification throws before it can compare anything:
+
+```
+POST /auth/login {"email":"arun@example.com","password":"Admin@123"}
+-> 401 {"message":"2FA token required"}
+
+POST /auth/login {"email":"arun@example.com","password":"Admin@123","totpToken":"000000"}
+-> 500 {"message":"Invalid Base32 string: Unknown letter \"1\". Allowed: ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
+        "error":{"code":"INTERNAL_ERROR"}}
+```
+
+The Base32 generator fix from the 2026-08-23 batch works for **new** secrets — it
+was never applied to the seed data, so this account is permanently locked out and
+the whole `/influencer/*` area is untestable end to end.
+
+**Needed:** reseed with a valid Base32 secret, or set
+`isTwoFactorEnabled: false` on the seeded influencer. Also worth catching the
+Base32 parse failure and returning `401 "Invalid 2FA token"` rather than a `500`
+that echoes the internals.
+
+Frontend side is done and verified: the login form now shows a code step and
+sends `totpToken`. The request reaches TOTP verification — the error above is
+what comes back — so this unblocks the moment the secret is valid.
+
+## 22. 🟠 List endpoints reject every sort parameter
+
+```
+GET /users?limit=2&sortBy=createdAt&sortOrder=desc
+-> 400 ["property sortBy should not exist", "property sortOrder should not exist"]
+GET /users?limit=2&sort=createdAt
+-> 400 ["property sort should not exist"]
+```
+
+The admin tables have a "Sort by" control on five screens. It is wired
+client-side for now (`src/lib/sort.js`), which is honest today because these
+pages fetch the whole set with `limit: 100` and render it unpaginated. **If you
+add server-side pagination, this quietly breaks** — it would sort one page and
+look wrong. A `sortBy`/`sortOrder` pair on the list DTOs would settle it.
+
+## 23. 🟠 Campaigns cannot be edited or deleted
+
+```
+PATCH  /campaigns/:id -> 404 "Cannot PATCH /api/v1/campaigns/..."
+DELETE /campaigns/:id -> 404
+```
+
+Only `POST /campaigns` and the read endpoints exist. The campaigns table had
+edit and restrict icons next to each row; both have been **removed** rather than
+left inert, so the row now offers viewing only. Worth having at least a status
+change (pause / complete a campaign) — say when it lands and the controls go back.
+
+## 24. 🟠 No admin endpoint to edit another user
+
+```
+PATCH /users/:id -> 404          (only PATCH /users/me exists)
+PATCH /users/:id/status -> works, one of ACTIVE | SUSPENDED | BLOCKED | INACTIVE
+```
+
+There is also no `DELETE /users/:id`, so "delete user" in the UI means setting
+`BLOCKED`. The pen/edit icons on the influencer rows and the Edit button on the
+influencer detail view have been removed for the same reason as #23 — there was
+nothing behind them.
+
+---
+
 ## 17. 🔴 URGENT — `GET /magazines` leaks admin password hashes and 2FA secrets
 
 Introduced by the 2026-08-24 deploy. `GET /api/v1/magazines` is `@Public()`, and

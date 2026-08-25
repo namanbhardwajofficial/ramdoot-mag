@@ -46,6 +46,7 @@ export default function useSecurity() {
 
   const [devices, setDevices] = useState([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
+  const [devicesError, setDevicesError] = useState(null);
 
   const changePassword = useCallback(async ({ current, next, confirm }) => {
     const problem = validatePasswordChange({ current, next, confirm });
@@ -116,12 +117,17 @@ export default function useSecurity() {
 
   const cancelTwoFactor = useCallback(() => setTwoFactor(null), []);
 
+  // A failed load used to console.warn, so the Security panel said "No active
+  // sessions" — telling the user nothing is signed in to their account when we
+  // simply could not find out. That is the wrong answer to get wrong.
   const loadDevices = useCallback(async () => {
     setDevicesLoading(true);
+    setDevicesError(null);
     try {
       setDevices(listOf(await usersApi.devices()).map(mapSession));
     } catch (err) {
-      console.warn('devices', err.message);
+      setDevices([]);
+      setDevicesError(err.message || 'Could not load your active sessions');
     } finally {
       setDevicesLoading(false);
     }
@@ -149,6 +155,7 @@ export default function useSecurity() {
     cancelTwoFactor,
     devices,
     devicesLoading,
+    devicesError,
     loadDevices,
     revokeDevice,
   };

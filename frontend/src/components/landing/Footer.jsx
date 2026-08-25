@@ -8,7 +8,7 @@ import {
   FaTelegram,
 } from 'react-icons/fa6';
 import Logo from '@/components/Logo';
-import { ORG } from '@/config/constants';
+import { ORG, SOCIAL_LINKS } from '@/config/constants';
 
 const LINKS = [
   { label: 'Home', href: '#home' },
@@ -18,14 +18,20 @@ const LINKS = [
   { label: 'Testimonial', href: '#testimonial' },
 ];
 
+/**
+ * Every one of these was `href="#"` — seven icons that looked like the
+ * foundation's social presence and scrolled to the top of the page instead.
+ * They now read their URL from SOCIAL_LINKS (env-driven, see constants) and an
+ * icon with no URL is not rendered at all. WhatsApp and Telegram are dropped
+ * for now: neither has an env slot because neither is a profile URL the way the
+ * others are — add them when there is a real invite link to point at.
+ */
 const SOCIALS = [
-  { Icon: FaFacebook, label: 'Facebook' },
-  { Icon: FaXTwitter, label: 'X' },
-  { Icon: FaInstagram, label: 'Instagram' },
-  { Icon: FaLinkedin, label: 'LinkedIn' },
-  { Icon: FaYoutube, label: 'YouTube' },
-  { Icon: FaWhatsapp, label: 'WhatsApp' },
-  { Icon: FaTelegram, label: 'Telegram' },
+  { Icon: FaFacebook, label: 'Facebook', key: 'facebook' },
+  { Icon: FaXTwitter, label: 'X', key: 'twitter' },
+  { Icon: FaInstagram, label: 'Instagram', key: 'instagram' },
+  { Icon: FaLinkedin, label: 'LinkedIn', key: 'linkedin' },
+  { Icon: FaYoutube, label: 'YouTube', key: 'youtube' },
 ];
 
 export default function Footer() {
@@ -59,10 +65,12 @@ export default function Footer() {
             © {new Date().getFullYear()} {ORG.name}. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-[#1c1c1e]/55">
-            {SOCIALS.map(({ Icon, label }) => (
+            {SOCIALS.filter(({ key }) => SOCIAL_LINKS[key]).map(({ Icon, label, key }) => (
               <a
                 key={label}
-                href="#"
+                href={SOCIAL_LINKS[key]}
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label={label}
                 className="transition-colors hover:text-[#1c1c1e]"
               >

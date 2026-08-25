@@ -1,5 +1,6 @@
 import TwoColSection from '@/components/landing/TwoColSection';
 import { ChevronRightIcon } from '@/components/ui/icons';
+import { ORG } from '@/config/constants';
 
 const BODY =
   'Choose your subscription plans to get magazines every month, subscription plans to get magazines every month.';
@@ -77,13 +78,19 @@ export default function AboutUs() {
                   <p className="mt-2 max-w-[400px] text-sm leading-relaxed text-[#1c1c1e]/55">
                     {BODY}
                   </p>
-                  <button
-                    type="button"
+                  {/* Was a handler-less <button>. There is no per-project page
+                      in this app — the restoration projects live on the
+                      foundation's own site, which is where the donation CTAs
+                      already point. */}
+                  <a
+                    href={ORG.site}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#1c1c1e] transition-opacity hover:opacity-70"
                   >
                     View Details
                     <ChevronRightIcon className="h-3.5 w-3.5" />
-                  </button>
+                  </a>
                 </>
               ) : (
                 <div className="h-[150px] w-full rounded-2xl bg-[#d9d7d8] sm:h-[170px]" />

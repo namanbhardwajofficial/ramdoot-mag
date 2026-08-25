@@ -1,5 +1,6 @@
 import Drawer from '@/components/ui/drawer';
 import StepProgress from '@/components/ui/step-progress';
+import SupportLink from '@/components/SupportLink';
 
 const PAYOUT_STEPS = [
   { title: 'Payment request received', description: 'Please provide your name and email' },
@@ -70,7 +71,7 @@ export default function InfluencerPayoutDrawer({
           </button>
           <p className="text-center text-xs text-slate-400">
             Trouble in getting refund{' '}
-            <span className="font-medium text-slate-900">Connect Support</span>
+            <SupportLink>Connect Support</SupportLink>
           </p>
         </div>
       }

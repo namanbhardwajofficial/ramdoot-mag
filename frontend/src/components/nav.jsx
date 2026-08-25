@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Drawer from "@/components/ui/drawer";
 import AccountMenu from "@/components/ui/account-menu";
+import NotificationBell from "@/components/ui/notification-bell";
 import { Link } from "react-router";
 
 const iconMap = {
@@ -124,24 +125,11 @@ export default function Nav({
         <div className="text-lg font-semibold">RAMDOOT</div>
 
         <div className="flex items-center gap-2">
-          <button
-            className="p-2 rounded-md hover:bg-slate-100 text-slate-700"
-            aria-label="Notifications"
-          >
-            <svg
-              className="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-          </button>
+          {/* This was a hand-drawn bell with no handler — the mobile header's
+              only notification affordance, and it did nothing. The real
+              component (with the unread badge and the drawer) already exists
+              and is what the desktop top bar uses. */}
+          <NotificationBell className="h-9 w-9 rounded-md border-0 shadow-none" />
         </div>
       </div>
 

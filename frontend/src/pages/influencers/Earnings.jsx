@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import DataTable from '@/components/ui/data-table';
 import StatusBadge from '@/components/ui/status-badge';
+import ErrorState from '@/components/ui/error-state';
 import Button from '@/components/Button.jsx';
 import { CalendarIcon } from '@/components/ui/icons';
 import { ORG } from '@/config/constants';
@@ -23,6 +23,9 @@ function mapEarnCampaign(c) {
   return {
     id: c.id,
     name: c.name,
+    // Keep the raw timestamp alongside the display string so the period filter
+    // has something to compare against.
+    at: c.startDate ? new Date(c.startDate).getTime() : null,
     startingDate: fmtDate(c.startDate),
     totalClicks: clicks,
     clickConversions: conv,
@@ -35,6 +38,7 @@ function mapInvoice(p) {
   return {
     id: p.id,
     name: `Payout #${String(p.id).slice(0, 6)}`,
+    at: p.createdAt ? new Date(p.createdAt).getTime() : null,
     billingDate: fmtDate(p.createdAt),
     status: lc(p.status),
     amount: Number(p.amount ?? 0),
@@ -42,10 +46,29 @@ function mapInvoice(p) {
   };
 }
 
-const FILTERS = ['All', '1 Month', '6 Month', '1 Year', 'Custom'];
+// Period filter. "Custom" was dropped — there is no date picker behind it, so it
+// was a fourth way to select nothing. `months: null` means "no cutoff".
+const FILTERS = [
+  { label: 'All', months: null },
+  { label: '1 Month', months: 1 },
+  { label: '6 Month', months: 6 },
+  { label: '1 Year', months: 12 },
+];
 
-const commissionTrend = [20, 28, 24, 36, 30, 44, 38, 52, 47, 60, 55, 72].map((v) => ({ v }));
-const payoutTrend = [12, 16, 14, 22, 19, 27, 24, 30, 28, 36, 33, 44].map((v) => ({ v }));
+// Start of the selected window, or null for "All".
+function cutoffFor(months, now = new Date()) {
+  if (!months) return null;
+  const d = new Date(now);
+  d.setMonth(d.getMonth() - months);
+  return d;
+}
+
+function withinPeriod(rows, months) {
+  const cutoff = cutoffFor(months);
+  if (!cutoff) return rows;
+  const min = cutoff.getTime();
+  return rows.filter((r) => r.at == null || r.at >= min);
+}
 
 function PdfIcon() {
   return (
@@ -58,26 +81,30 @@ function PdfIcon() {
   );
 }
 
-function SummaryCard({ label, value, caption, data, gradientId }) {
+/**
+ * Both cards used to draw an AreaChart over a literal array — a confident
+ * twelve-point climb that was identical for every influencer and every balance,
+ * including a balance of zero. No per-influencer time series exists (there is no
+ * `GET /earnings/timeseries`), so the chart is gone rather than invented. The
+ * figure is real; nothing beside it now claims to be.
+ *
+ * `value` of null means the fetch has not landed or failed — a dash, not "₹ 0",
+ * which would assert a real balance of zero.
+ */
+function SummaryCard({ label, value, caption }) {
+  const unknown = value === null || value === undefined;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
       <span className="text-sm font-semibold text-slate-700">{label}</span>
       <div className="flex items-baseline gap-2 mt-2">
-        <span className="text-3xl font-bold text-slate-900">{value}</span>
-        <span className="text-xs text-slate-400">{caption}</span>
-      </div>
-      <div className="h-24 mt-3 -mx-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#34D399" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#34D399" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area type="monotone" dataKey="v" stroke="#34D399" strokeWidth={2} fill={`url(#${gradientId})`} />
-          </AreaChart>
-        </ResponsiveContainer>
+        {unknown ? (
+          <span className="text-3xl font-bold text-slate-300" title="Not loaded">&mdash;</span>
+        ) : (
+          <>
+            <span className="text-3xl font-bold text-slate-900">{value}</span>
+            <span className="text-xs text-slate-400">{caption}</span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -89,31 +116,56 @@ export default function Earnings() {
   const [earnings, setEarnings] = useState(null);
   const [campRows, setCampRows] = useState([]);
   const [invoiceRows, setInvoiceRows] = useState([]);
+  // One error slot per region. These three fetches used to console.warn and
+  // leave the screen looking merely empty.
+  const [errors, setErrors] = useState({ earnings: null, campaigns: null, payouts: null });
+  const [loading, setLoading] = useState({ earnings: true, campaigns: true, payouts: true });
+
+  const setErr = (key, msg) => setErrors((e) => ({ ...e, [key]: msg }));
+  const setBusy = (key, v) => setLoading((l) => ({ ...l, [key]: v }));
+
+  const loadEarnings = useCallback(() => {
+    setBusy('earnings', true);
+    setErr('earnings', null);
+    return earningsApi
+      .overview()
+      .then((res) => setEarnings(res || null))
+      .catch((err) => setErr('earnings', err.message || 'Could not load earnings'))
+      .finally(() => setBusy('earnings', false));
+  }, []);
+
+  const loadCampaigns = useCallback(() => {
+    setBusy('campaigns', true);
+    setErr('campaigns', null);
+    return campaignsApi
+      .list({ limit: 50 })
+      .then((res) => setCampRows(listOf(res).map(mapEarnCampaign)))
+      .catch((err) => setErr('campaigns', err.message || 'Could not load campaigns'))
+      .finally(() => setBusy('campaigns', false));
+  }, []);
+
+  const loadPayouts = useCallback(() => {
+    setBusy('payouts', true);
+    setErr('payouts', null);
+    return earningsApi
+      .payouts()
+      .then((res) => setInvoiceRows(listOf(res).map(mapInvoice)))
+      .catch((err) => setErr('payouts', err.message || 'Could not load payouts'))
+      .finally(() => setBusy('payouts', false));
+  }, []);
 
   useEffect(() => {
-    let alive = true;
-    earningsApi
-      .overview()
-      .then((res) => { if (alive && res) setEarnings(res); })
-      .catch((err) => console.warn('earnings', err.message));
-    campaignsApi
-      .list({ limit: 50 })
-      .then((res) => {
-        const items = listOf(res).map(mapEarnCampaign);
-        if (alive) setCampRows(items);
-      })
-      .catch((err) => console.warn('campaigns', err.message));
-    earningsApi
-      .payouts()
-      .then((res) => {
-        const items = listOf(res).map(mapInvoice);
-        if (alive) setInvoiceRows(items);
-      })
-      .catch((err) => console.warn('payouts', err.message));
-    return () => {
-      alive = false;
-    };
-  }, []);
+    loadEarnings();
+    loadCampaigns();
+    loadPayouts();
+  }, [loadEarnings, loadCampaigns, loadPayouts]);
+
+  const months = FILTERS.find((f) => f.label === filter)?.months ?? null;
+  const visibleCampaigns = withinPeriod(campRows, months);
+  const visibleInvoices = withinPeriod(invoiceRows, months);
+  const rangeStart = cutoffFor(months);
+  const fmtShort = (d) =>
+    d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const campaignColumns = [
     { key: 'name', label: 'Campaign Name', render: (v) => <span className="font-medium text-slate-800">{v}</span> },
@@ -159,33 +211,50 @@ export default function Earnings() {
         <Button text="Request Payout" handler={() => navigate('/influencer/earnings/request-payout')} />
       </div>
 
-      {/* Filters + date range */}
+      {/* Filters + date range. The buttons now actually narrow both tables, and
+          the range label is computed from the selection instead of the fixed
+          "Jan 10, 2025 – Jan 16, 2025" that used to sit here. */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="inline-flex items-center gap-1 bg-slate-100 rounded-xl p-1">
           {FILTERS.map((f) => (
             <button
-              key={f}
+              key={f.label}
               type="button"
-              onClick={() => setFilter(f)}
+              onClick={() => setFilter(f.label)}
+              aria-pressed={filter === f.label}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                filter === f ? 'bg-white text-slate-900 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
+                filter === f.label ? 'bg-white text-slate-900 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              {f}
+              {f.label}
             </button>
           ))}
         </div>
         <div className="inline-flex items-center gap-2 text-sm text-slate-600 border border-slate-200 rounded-xl px-3 py-2 bg-white">
           <CalendarIcon className="w-4 h-4 text-slate-400" />
-          Jan 10, 2025 – Jan 16, 2025
+          {rangeStart ? `${fmtShort(rangeStart)} – ${fmtShort(new Date())}` : 'All time'}
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-        <SummaryCard label="Commission Earning" value={earnings ? inr(earnings.totalEarnings) : '₹ 0'} caption="In Total" data={commissionTrend} gradientId="commissionEarning" />
-        <SummaryCard label="Payout Available" value={earnings ? inr(earnings.availableBalance) : '₹ 0'} caption="In your account" data={payoutTrend} gradientId="payoutAvailable" />
-      </div>
+      {errors.earnings ? (
+        <div className="mb-10">
+          <ErrorState message={errors.earnings} onRetry={loadEarnings} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+          <SummaryCard
+            label="Commission Earning"
+            value={earnings ? inr(earnings.totalEarnings) : null}
+            caption="In Total"
+          />
+          <SummaryCard
+            label="Payout Available"
+            value={earnings ? inr(earnings.availableBalance) : null}
+            caption="In your account"
+          />
+        </div>
+      )}
 
       {/* Campaigns Commissions */}
       <section className="mb-10">
@@ -193,7 +262,14 @@ export default function Earnings() {
           <h2 className="text-xl font-bold text-slate-900">Campaigns Commissions</h2>
           <p className="text-sm text-slate-500">View all the earning report from all your links and shares from</p>
         </div>
-        <DataTable columns={campaignColumns} data={campRows} />
+        <DataTable
+          columns={campaignColumns}
+          data={visibleCampaigns}
+          loading={loading.campaigns}
+          error={errors.campaigns}
+          onRetry={loadCampaigns}
+          emptyMessage={months ? 'No campaigns in this period' : 'No campaigns yet'}
+        />
       </section>
 
       {/* Paid Invoices */}
@@ -202,7 +278,14 @@ export default function Earnings() {
           <h2 className="text-xl font-bold text-slate-900">Paid Invoices</h2>
           <p className="text-sm text-slate-500">View all the earning report from all your links and shares from</p>
         </div>
-        <DataTable columns={invoiceColumns} data={invoiceRows} />
+        <DataTable
+          columns={invoiceColumns}
+          data={visibleInvoices}
+          loading={loading.payouts}
+          error={errors.payouts}
+          onRetry={loadPayouts}
+          emptyMessage={months ? 'No payouts in this period' : 'No payouts yet'}
+        />
       </section>
     </div>
   );

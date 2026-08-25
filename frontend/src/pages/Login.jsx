@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.webp';
-import { FiHelpCircle, FiEye } from "react-icons/fi";
-import { authApi, saveAuth, routeForRole } from '@/lib/api';
+import { FiHelpCircle, FiEye, FiEyeOff } from "react-icons/fi";
+import { authApi, saveAuth, routeForRole, isTwoFactorError } from '@/lib/api';
 
 const Login = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    // Second step: the account has 2FA on, so the password alone is rejected
+    // until we also send the code from the authenticator app.
+    const [needsTotp, setNeedsTotp] = useState(false);
+    const [totpToken, setTotpToken] = useState('');
+    const totpRef = useRef(null);
+
+    useEffect(() => {
+        if (needsTotp) totpRef.current?.focus();
+    }, [needsTotp]);
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
@@ -20,15 +30,45 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const data = await authApi.login(email.trim(), password, rememberMe);
+            const data = await authApi.login({
+                email: email.trim(),
+                password,
+                rememberMe,
+                totpToken: needsTotp ? totpToken.trim() : undefined,
+            });
             saveAuth(data);
             // Send each role to its own area of the app.
             navigate(routeForRole(data.user?.role));
         } catch (err) {
-            setError(err.message);
+            // "2FA token required" is not a dead end — reveal the code field and
+            // let the same credentials go back up with the token attached.
+            if (needsTotp) {
+                // Already on the code step. Stay here whatever the message says:
+                // the password was accepted to get this far, so bouncing back to
+                // it would lose that and explain nothing. The server can also
+                // fail here for reasons that are not about the code the user
+                // typed — a malformed stored secret comes back as
+                // "Invalid Base32 string…" — and those need to stay readable.
+                setTotpToken('');
+                setError(err.message);
+            } else if (isTwoFactorError(err.message)) {
+                setNeedsTotp(true);
+                setTotpToken('');
+                setError(
+                    'This account is protected by two-factor authentication. Enter the 6-digit code from your authenticator app.',
+                );
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const backToPassword = () => {
+        setNeedsTotp(false);
+        setTotpToken('');
+        setError('');
     };
 
     return (
@@ -84,36 +124,91 @@ const Login = () => {
                         Login & access your account to read more about history.
                     </p>
                     
-                    {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
+                    {error && <p className={`text-sm mt-2 font-medium ${needsTotp ? 'text-amber-600' : 'text-red-500'}`} role="alert">{error}</p>}
 
+                    <form onSubmit={handleLogin}>
+                    {needsTotp ? (
+                        /* ---- Step 2: authenticator code ---- */
+                        <>
+                            <div className="my-4 lg:my-5 flex flex-col gap-2">
+                                <label className="text-sm lg:text-base font-medium" htmlFor="totp">Authentication Code *</label>
+                                <input
+                                    id="totp"
+                                    ref={totpRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    maxLength={6}
+                                    value={totpToken}
+                                    onChange={(e) => setTotpToken(e.target.value.replace(/\D/g, ''))}
+                                    className="border-black/10 border-[1px] p-3 lg:p-2 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-lg tracking-[0.5em] text-center font-mono"
+                                    placeholder="000000"
+                                />
+                                <p className="text-xs text-black/50">
+                                    Signing in as <span className="font-medium text-black/70">{email.trim()}</span>
+                                </p>
+                            </div>
+
+                            <div className="my-6 lg:my-5">
+                                <Button
+                                    text="Verify & Login"
+                                    width="100%"
+                                    type="submit"
+                                    loading={loading}
+                                    disabled={totpToken.length !== 6}
+                                    handler={handleLogin}
+                                />
+                            </div>
+
+                            <div className="flex justify-center">
+                                <button type="button" onClick={backToPassword} className="text-sm font-medium text-black/60 hover:text-black hover:underline">
+                                    Use a different account
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        /* ---- Step 1: email + password ---- */
+                        <>
                     <div className="my-4 lg:my-5 flex flex-col gap-2">
-                        <label className="text-sm lg:text-base font-medium">Email *</label>
+                        <label className="text-sm lg:text-base font-medium" htmlFor="email">Email *</label>
                         <div className="relative flex items-center">
-                            <input 
-                                type="text" 
+                            <input
+                                id="email"
+                                type="text"
+                                autoComplete="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
-                                placeholder="atharv@ramdootfoundation.com" 
+                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base"
+                                placeholder="atharv@ramdootfoundation.com"
                             />
                             <FiHelpCircle className="absolute right-3 text-black/40 text-lg cursor-pointer" />
                         </div>
                     </div>
-                    
+
                     <div className="my-4 lg:my-5 flex flex-col gap-2">
-                        <label className="text-sm lg:text-base font-medium">Password *</label>
+                        <label className="text-sm lg:text-base font-medium" htmlFor="password">Password *</label>
                         <div className="relative flex items-center">
-                            <input 
-                                type="password" 
+                            <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
-                                placeholder="*********" 
+                                className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 lg:pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base"
+                                placeholder="*********"
                             />
-                            <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
+                            {/* The eye used to be decorative — it looked interactive and did nothing. */}
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((s) => !s)}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                className="absolute right-3 text-black/40 hover:text-black/70 text-lg cursor-pointer"
+                            >
+                                {showPassword ? <FiEyeOff /> : <FiEye />}
+                            </button>
                         </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-center mb-6 lg:mb-0">
                         <div className="flex gap-2 items-center">
                             <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="cursor-pointer w-4 h-4 rounded border-gray-300" name="remember" id="remember" />
@@ -121,15 +216,18 @@ const Login = () => {
                         </div>
                         <Link to="/forgot-password" className="font-bold lg:font-medium text-xs lg:text-sm cursor-pointer hover:underline text-black">Forgot password</Link>
                     </div>
-                    
+
                     <div className="my-6 lg:my-5">
-                        <Button text={loading ? "Logging in..." : "Login"} width="100%" handler={handleLogin} />
+                        <Button text={loading ? "Logging in..." : "Login"} width="100%" type="submit" handler={handleLogin} />
                     </div>
-                    
+
                     <div className="flex justify-center gap-2 items-center">
                         <p className="font-light tracking-wide text-black/60 lg:text-highlight/80 text-sm">Don't have an account?</p>
                         <Link to="/signup" className="font-bold lg:font-medium cursor-pointer hover:underline text-black lg:text-black">Sign up</Link>
                     </div>
+                        </>
+                    )}
+                    </form>
                 </div>
 
                 {/* Footer */}

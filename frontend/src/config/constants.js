@@ -18,6 +18,38 @@ export const ORG = {
   currency: 'INR',
   currencySymbol: '\u20B9',
   theme: '#1e293b',
+  site: 'https://ramdootrestores.in',
+};
+
+// Where the donation CTAs on the landing page point.
+export const DONATE_URL = ORG.site;
+
+/**
+ * Single destination behind every "Connect Support" / "Connect Us" /
+ * "Get in Touch" control. There were eleven of them across the app and not one
+ * had a handler, so they all looked clickable and did nothing.
+ *
+ * Set `VITE_SUPPORT_EMAIL` to route them at a mailbox; without it they open the
+ * foundation's public site, which is a real destination rather than a guessed
+ * address that would bounce.
+ */
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || '';
+export const SUPPORT = {
+  email: SUPPORT_EMAIL,
+  href: SUPPORT_EMAIL ? `mailto:${SUPPORT_EMAIL}` : ORG.site,
+  // A mailto: hands off to the mail client; a website should open in a new tab
+  // so the user does not lose whatever they were part-way through.
+  external: !SUPPORT_EMAIL,
+};
+
+// Social profiles for the landing footer. An empty string hides that icon \u2014
+// better than an `href="#"` that scrolls to the top and looks broken.
+export const SOCIAL_LINKS = {
+  facebook: import.meta.env.VITE_SOCIAL_FACEBOOK || '',
+  instagram: import.meta.env.VITE_SOCIAL_INSTAGRAM || '',
+  twitter: import.meta.env.VITE_SOCIAL_TWITTER || '',
+  youtube: import.meta.env.VITE_SOCIAL_YOUTUBE || '',
+  linkedin: import.meta.env.VITE_SOCIAL_LINKEDIN || '',
 };
 
 // --- Navigation ---
@@ -108,11 +140,15 @@ export const PAYOUT_STATUSES = {
 };
 
 // --- Publications ---
+// DRAFT was missing here, so the Filters dropdown on the Publications page
+// could not select it — even though it is the status most magazines are
+// actually in (`GET /magazines` returns DRAFT, SCHEDULED and LIVE today).
 export const PUBLICATION_STATUSES = {
-  LIVE: 'live',
-  ARCHIVED: 'archived',
-  PAUSED: 'paused',
+  DRAFT: 'draft',
   SCHEDULED: 'scheduled',
+  LIVE: 'live',
+  PAUSED: 'paused',
+  ARCHIVED: 'archived',
 };
 
 export const PRICING_PLANS = [

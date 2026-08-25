@@ -9,6 +9,10 @@ function mapPayment(p) {
   return {
     ...p,
     userName: p.user?.fullName || '—',
+    // The id lives on the nested `user`, not at the top level — without this
+    // the table's "User & ID" cell rendered a bare "#" under every name.
+    userId: p.userId || p.user?.id || '',
+    userEmail: p.user?.email || '',
     magazineTitle: p.description || '—',
     amount: Number(p.amount ?? 0),
     status: lc(p.status),
@@ -19,7 +23,9 @@ function mapPayout(p) {
   return {
     ...p,
     influencerName: p.user?.fullName || p.influencer?.fullName || '—',
-    influencerId: p.userId || p.influencerId,
+    // Same as above: /admin/payouts nests the id under `user`.
+    influencerId: p.userId || p.influencerId || p.user?.id || p.influencer?.id || '',
+    influencerEmail: p.user?.email || p.influencer?.email || '',
     amount: Number(p.amount ?? 0),
     status: lc(p.status),
     // /admin/payouts does not join the campaign, so there is no name to show.

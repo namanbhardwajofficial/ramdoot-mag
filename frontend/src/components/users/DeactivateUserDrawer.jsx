@@ -2,6 +2,7 @@ import Drawer from '@/components/ui/drawer';
 import StatusBadge from '@/components/ui/status-badge';
 import { ORG } from '@/config/constants';
 import { toastSuccess, toastError } from '@/lib/confirm';
+import SupportLink from '@/components/SupportLink';
 
 function CopyField({ label, value }) {
   function handleCopy() {
@@ -48,7 +49,7 @@ export default function DeactivateUserDrawer({ open, user, onClose, onDeactivate
             </svg>
           </button>
           <p className="text-xs text-center text-slate-400">
-            Trouble in deactivate account? <span className="text-slate-700 font-medium underline underline-offset-2 cursor-pointer">Connect Us</span>
+            Trouble in deactivate account? <SupportLink className="text-slate-700 font-medium underline underline-offset-2 hover:text-slate-900">Connect Us</SupportLink>
           </p>
         </div>
       }

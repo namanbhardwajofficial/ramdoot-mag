@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import DataTable from '@/components/ui/data-table';
 import StatusBadge from '@/components/ui/status-badge';
+import useAsync from '@/hooks/useAsync';
 import { ORG } from '@/config/constants';
 import { earningsApi, listOf, lc } from '@/lib/api';
 
@@ -15,32 +15,26 @@ const columns = [
 ];
 
 export default function RequestedPayout() {
-  const [rows, setRows] = useState([]);
-
-  useEffect(() => {
-    let alive = true;
-    earningsApi
-      .payouts()
-      .then((res) => {
-        if (!alive) return;
-        setRows(
-          listOf(res).map((p) => ({
-            id: p.id,
-            formId: `#${String(p.id).slice(0, 8)}`,
-            date: p.createdAt
-              ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-              : '—',
-            status: lc(p.status),
-            funds: Number(p.amount || 0),
-            remaining: Number(p.amount || 0),
-          })),
-        );
-      })
-      .catch((err) => console.warn('payouts', err.message));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // A failed load used to console.warn, so "your payout request never arrived"
+  // and "we could not reach the server" looked identical: an empty table.
+  const { data: rows, error, loading, reload } = useAsync(
+    () => earningsApi.payouts(),
+    [],
+    {
+      initial: [],
+      map: (res) =>
+        listOf(res).map((p) => ({
+          id: p.id,
+          formId: `#${String(p.id).slice(0, 8)}`,
+          date: p.createdAt
+            ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—',
+          status: lc(p.status),
+          funds: Number(p.amount || 0),
+          remaining: Number(p.amount || 0),
+        })),
+    },
+  );
 
   return (
     <div className="p-1">
@@ -49,7 +43,14 @@ export default function RequestedPayout() {
         <p className="text-sm text-slate-500 mt-1">View all the earning report from all your links and shares from</p>
       </header>
 
-      <DataTable columns={columns} data={rows} />
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyMessage="You have not requested a payout yet"
+      />
     </div>
   );
 }

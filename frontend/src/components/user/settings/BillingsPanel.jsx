@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import { ORG } from "@/config/constants";
 import StatusBadge from "@/components/ui/status-badge";
 import { FileTextIcon } from "@/components/ui/icons";
+import ErrorState from "@/components/ui/error-state";
 import { SectionHeader } from "./parts";
 import { subscriptionsApi, paymentsApi, listOf, lc } from "@/lib/api";
 
@@ -85,29 +86,47 @@ export default function BillingsPanel() {
   const [subs, setSubs] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Both of these used to console.warn. That turned a failed request into
+  // "You don't have an active subscription" and "No payments yet" — two
+  // statements about the user's account that could be flatly untrue, on the one
+  // screen where being wrong about it matters most.
+  const [subsError, setSubsError] = useState(null);
+  const [paymentsError, setPaymentsError] = useState(null);
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all([
+  const loadSubs = useCallback(
+    () =>
       subscriptionsApi
         .mine()
         .then((res) => {
-          if (alive) setSubs(listOf(res));
+          setSubs(listOf(res));
+          setSubsError(null);
         })
-        .catch((err) => console.warn("mine", err.message)),
+        .catch((err) => setSubsError(err.message || "Could not load your subscription")),
+    [],
+  );
+
+  const loadPayments = useCallback(
+    () =>
       paymentsApi
         .mine()
         .then((res) => {
-          if (alive) setPayments(listOf(res));
+          setPayments(listOf(res));
+          setPaymentsError(null);
         })
-        .catch((err) => console.warn("payments", err.message)),
-    ]).finally(() => {
+        .catch((err) => setPaymentsError(err.message || "Could not load your payments")),
+    [],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    Promise.all([loadSubs(), loadPayments()]).finally(() => {
       if (alive) setLoading(false);
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadSubs, loadPayments]);
 
   const active =
     subs.find((s) => String(s.status || "").toUpperCase() === "ACTIVE") || null;
@@ -124,7 +143,9 @@ export default function BillingsPanel() {
           title="Billing Cycle"
           subtitle="Your current subscription and renewal dates"
         />
-        {active ? (
+        {subsError ? (
+          <ErrorState message={subsError} onRetry={loadSubs} />
+        ) : active ? (
           <div className="space-y-4">
             <CurrentPlan sub={active} />
             <Link
@@ -155,7 +176,9 @@ export default function BillingsPanel() {
           title="Past Payments"
           subtitle="Every payment recorded on your account"
         />
-        {payments.length === 0 ? (
+        {paymentsError ? (
+          <ErrorState message={paymentsError} onRetry={loadPayments} />
+        ) : payments.length === 0 ? (
           <p className="text-sm text-slate-400">No payments yet.</p>
         ) : (
           <div className="overflow-x-auto">

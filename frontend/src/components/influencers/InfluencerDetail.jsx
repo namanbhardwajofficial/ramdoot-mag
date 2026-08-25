@@ -2,10 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import StatusBadge from '@/components/ui/status-badge';
 import DataTable from '@/components/ui/data-table';
 import Toolbar from '@/components/ui/toolbar';
-import { ORG } from '@/config/constants';
+import { ORG, CAMPAIGN_STATUSES } from '@/config/constants';
 import useInfluencers from '@/hooks/useInfluencers';
 import ErrorState from '@/components/ui/error-state';
+import CampaignDetailsDrawer from '@/components/influencers/CampaignDetailsDrawer';
+import { sortRows } from '@/lib/sort';
 import { adminApi, listOf } from '@/lib/api';
+
+const DETAIL_CAMPAIGN_SORTS = [
+  { value: 'name:asc', label: 'Name (A–Z)' },
+  { value: 'startingDate:desc', label: 'Newest first' },
+  { value: 'totalClicks:desc', label: 'Most clicks' },
+  { value: 'status:asc', label: 'Status' },
+];
 
 // Placeholder for tabs whose backing endpoint doesn't exist yet. Better than a
 // spinner that never resolves — see BACKEND_GAPS.md.
@@ -50,19 +59,28 @@ function Avatar({ size = 'lg' }) {
 function CampaignsTab({ influencerId }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Was a console.warn: a failed load looked exactly like "no campaigns".
+  const [error, setError] = useState(null);
+  // The Toolbar here was mounted with every callback stubbed to `() => {}` —
+  // its filter, sort and search were all inert. These back it for real.
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sort, setSort] = useState('');
+  // "View Campaign" had no handler; it opens the same drawer the campaign list
+  // uses.
+  const [selected, setSelected] = useState(null);
   const { getInfluencerCampaigns } = useInfluencers();
 
-  useEffect(() => {
-    let alive = true;
+  const load = useCallback(() => {
     setLoading(true);
-    getInfluencerCampaigns(influencerId)
-      .then((rows) => alive && setCampaigns(rows))
-      .catch((err) => console.warn('influencerCampaigns', err.message))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+    setError(null);
+    return getInfluencerCampaigns(influencerId)
+      .then(setCampaigns)
+      .catch((err) => setError(err.message || 'Could not load campaigns'))
+      .finally(() => setLoading(false));
   }, [influencerId, getInfluencerCampaigns]);
+
+  useEffect(() => { load(); }, [load]);
 
   const columns = [
     { key: 'name', label: 'Campaign Name' },
@@ -73,8 +91,11 @@ function CampaignsTab({ influencerId }) {
     { key: 'commissionEarned', label: 'Commission Earned', render: (v) => `${ORG.currencySymbol}${v?.toLocaleString('en-IN')}` },
     {
       key: '_actions', label: '', align: 'right',
-      render: () => (
-        <button className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-full hover:bg-slate-800">
+      render: (_v, row) => (
+        <button
+          onClick={() => setSelected(row)}
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-full hover:bg-slate-800"
+        >
           View Campaign
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </button>
@@ -82,12 +103,43 @@ function CampaignsTab({ influencerId }) {
     },
   ];
 
+  const q = search.trim().toLowerCase();
+  const visible = sortRows(
+    campaigns.filter(
+      (c) =>
+        (!statusFilter || c.status === statusFilter) &&
+        (!q || String(c.name || '').toLowerCase().includes(q) || String(c.promoCode || '').toLowerCase().includes(q)),
+    ),
+    sort,
+  );
+
   return (
     <>
       <h2 className="text-lg font-semibold mb-1">Active Campaign</h2>
       <p className="text-sm text-slate-500 mb-4">Campaigns this influencer is currently running</p>
-      <Toolbar statusFilter="" onStatusChange={() => {}} statusOptions={[]} search="" onSearchChange={() => {}} />
-      <DataTable columns={columns} data={campaigns} loading={loading} />
+      <Toolbar
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        statusOptions={Object.values(CAMPAIGN_STATUSES)}
+        search={search}
+        onSearchChange={setSearch}
+        sortOptions={DETAIL_CAMPAIGN_SORTS}
+        sort={sort}
+        onSortChange={setSort}
+      />
+      <DataTable
+        columns={columns}
+        data={visible}
+        loading={loading}
+        error={error}
+        onRetry={load}
+        emptyMessage="No campaigns for this influencer"
+      />
+      <CampaignDetailsDrawer
+        open={!!selected}
+        campaign={selected}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }
@@ -268,10 +320,10 @@ export default function InfluencerDetail({ influencer, onBack, onRestrict, onCre
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-            Edit
-          </button>
+          {/* An "Edit" button used to sit here with no handler. There is no
+              admin endpoint to edit another user with — PATCH /users/:id is a
+              404 and only PATCH /users/:id/status exists — so there was nothing
+              for it to open. Restrict below is the real control. */}
           <button onClick={() => onRestrict(influencer.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" /></svg>
             Restrict Account

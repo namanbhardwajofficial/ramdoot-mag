@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Button from "@/components/Button.jsx";
 import { Field, inputCls } from "@/components/settings/fields";
 import { MonitorIcon, SmartphoneIcon } from "@/components/ui/icons";
+import ErrorState from "@/components/ui/error-state";
 import { SectionHeader } from "./parts";
 import useSecurity from "@/hooks/useSecurity";
 import { getStoredUser } from "@/lib/api";
@@ -33,6 +34,7 @@ export default function SecurityPanel() {
     confirmTwoFactor,
     cancelTwoFactor,
     devices,
+    devicesError,
     devicesLoading,
     loadDevices,
     revokeDevice,
@@ -173,7 +175,9 @@ export default function SecurityPanel() {
           activity on your account.
         </p>
 
-        {devicesLoading ? (
+        {devicesError ? (
+          <ErrorState message={devicesError} onRetry={loadDevices} className="mt-6" />
+        ) : devicesLoading ? (
           <p className="mt-6 text-sm text-slate-400">Loading sessions…</p>
         ) : devices.length === 0 ? (
           <p className="mt-6 text-sm text-slate-400">No active sessions.</p>

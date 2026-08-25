@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import MagazineCollection, {
   ViewToggle,
 } from "@/components/user/MagazineCollection";
+import ErrorState from "@/components/ui/error-state";
+import useAsync from "@/hooks/useAsync";
 import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 
 /**
@@ -12,21 +14,17 @@ import { magazinesApi, listOf, toMagazineCard } from "@/lib/api";
 export default function Home() {
   const navigate = useNavigate();
   const [view, setView] = useState("list");
-  const [mags, setMags] = useState([]);
-
-  useEffect(() => {
-    let alive = true;
-    magazinesApi
-      .list({ status: "LIVE", limit: 12 })
-      .then((res) => {
-        const items = listOf(res).map(toMagazineCard);
-        if (alive) setMags(items);
-      })
-      .catch((err) => console.warn("magazines", err.message));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // Failure here used to be a console.warn, which left the page looking like a
+  // catalogue with nothing in it.
+  const {
+    data: mags,
+    error,
+    loading,
+    reload,
+  } = useAsync(() => magazinesApi.list({ status: "LIVE", limit: 12 }), [], {
+    initial: [],
+    map: (res) => listOf(res).map(toMagazineCard),
+  });
 
   return (
     <div className="space-y-10">
@@ -53,11 +51,17 @@ export default function Home() {
           <ViewToggle view={view} onChange={setView} />
         </div>
 
-        <MagazineCollection
-          magazines={mags}
-          view={view}
-          onRead={(m) => navigate(`/user/magazines/${m.id}`)}
-        />
+        {error ? (
+          <ErrorState message={error} onRetry={reload} />
+        ) : loading ? (
+          <p className="py-10 text-center text-sm text-slate-400">Loading magazines&hellip;</p>
+        ) : (
+          <MagazineCollection
+            magazines={mags}
+            view={view}
+            onRead={(m) => navigate(`/user/magazines/${m.id}`)}
+          />
+        )}
       </section>
     </div>
   );
