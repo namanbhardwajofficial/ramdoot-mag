@@ -14,6 +14,11 @@ function fmtDate(iso) {
 }
 
 // Backend campaign -> the row shape this table expects.
+//
+// `commission` starts as null, not 0. GET /campaigns carries no money at all —
+// only `_count` aggregates — so a literal 0 here was a wrong number stated
+// confidently: "Summer Reading Drive" has earned ₹109 and the table said ₹0.
+// The real figure comes from /campaigns/:id/financials, fetched per row below.
 function mapCampaignRow(c) {
   const clicks = c._count?.clickEvents ?? 0;
   const conv = c._count?.conversions ?? 0;
@@ -24,8 +29,27 @@ function mapCampaignRow(c) {
     totalClicks: clicks,
     clickConversions: conv,
     conversions: clicks ? `${Math.round((conv / clicks) * 100)}%` : '0%',
-    commission: 0,
+    commission: null,
   };
+}
+
+/**
+ * Fill in each row's commission from its own financials call.
+ *
+ * There is no bulk endpoint for this, so it is one request per visible row —
+ * bounded by the page size (10). A row whose call fails keeps `null` and renders
+ * a dash rather than inventing a zero.
+ */
+async function withCommission(rows) {
+  const settled = await Promise.allSettled(
+    rows.map((r) => campaignsApi.financials(r.id)),
+  );
+  return rows.map((r, i) => {
+    const res = settled[i];
+    if (res.status !== 'fulfilled') return r;
+    const value = Number(res.value?.totalCommission);
+    return { ...r, commission: Number.isFinite(value) ? value : null };
+  });
 }
 
 const PAGE_SIZE = 10;
@@ -46,22 +70,20 @@ export default function Campaigns() {
     setError(null);
     return campaignsApi
       .list({ page: p, limit: PAGE_SIZE })
-      .then((res) => {
-        setRows(listOf(res).map(mapCampaignRow));
+      .then(async (res) => {
+        const base = listOf(res).map(mapCampaignRow);
         setMeta(metaOf(res, PAGE_SIZE));
+        // Show the table straight away, then fill the commission column in —
+        // the per-row financials calls should not hold up the rest of the data.
+        setRows(base);
+        setRows(await withCommission(base));
       })
       .catch((err) => setError(err.message || 'Could not load campaigns'))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    load(page).then(() => {
-      if (!alive) return;
-    });
-    return () => {
-      alive = false;
-    };
+    load(page);
   }, [load, page]);
 
   const columns = [
@@ -70,7 +92,13 @@ export default function Campaigns() {
     { key: 'totalClicks', label: 'Total Clicks', render: (v) => v.toLocaleString('en-IN') },
     { key: 'clickConversions', label: 'Click Conversions', render: (v) => v.toLocaleString('en-IN') },
     { key: 'conversions', label: 'Conversions' },
-    { key: 'commission', label: 'Commission Earned', render: (v) => `${ORG.currencySymbol} ${v.toLocaleString('en-IN')}` },
+    {
+      key: 'commission', label: 'Commission Earned',
+      render: (v) =>
+        v == null
+          ? <span className="text-slate-300" title="Not loaded">&mdash;</span>
+          : `${ORG.currencySymbol} ${v.toLocaleString('en-IN')}`,
+    },
     {
       key: '_actions', label: '', align: 'right',
       render: (_v, row) => (

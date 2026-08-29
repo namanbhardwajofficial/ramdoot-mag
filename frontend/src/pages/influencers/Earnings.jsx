@@ -17,6 +17,9 @@ function fmtDate(iso) {
 }
 const inr = (n) => `${ORG.currencySymbol} ${Number(n || 0).toLocaleString('en-IN')}`;
 
+// `commission` starts as null, not 0 — GET /campaigns carries no money, only
+// `_count` aggregates, so a literal 0 stated a wrong figure with confidence.
+// The real number comes from /campaigns/:id/financials (see withCommission).
 function mapEarnCampaign(c) {
   const clicks = c._count?.clickEvents ?? 0;
   const conv = c._count?.conversions ?? 0;
@@ -30,8 +33,20 @@ function mapEarnCampaign(c) {
     totalClicks: clicks,
     clickConversions: conv,
     conversions: clicks ? `${Math.round((conv / clicks) * 100)}%` : '0%',
-    commission: 0,
+    commission: null,
   };
+}
+
+// One financials call per campaign; there is no bulk endpoint. A row whose call
+// fails keeps null and renders a dash rather than inventing a zero.
+async function withCommission(rows) {
+  const settled = await Promise.allSettled(rows.map((r) => campaignsApi.financials(r.id)));
+  return rows.map((r, i) => {
+    const res = settled[i];
+    if (res.status !== 'fulfilled') return r;
+    const value = Number(res.value?.totalCommission);
+    return { ...r, commission: Number.isFinite(value) ? value : null };
+  });
 }
 
 function mapInvoice(p) {
@@ -139,7 +154,11 @@ export default function Earnings() {
     setErr('campaigns', null);
     return campaignsApi
       .list({ limit: 50 })
-      .then((res) => setCampRows(listOf(res).map(mapEarnCampaign)))
+      .then(async (res) => {
+        const base = listOf(res).map(mapEarnCampaign);
+        setCampRows(base);
+        setCampRows(await withCommission(base));
+      })
       .catch((err) => setErr('campaigns', err.message || 'Could not load campaigns'))
       .finally(() => setBusy('campaigns', false));
   }, []);
@@ -173,7 +192,13 @@ export default function Earnings() {
     { key: 'totalClicks', label: 'Total Clicks', render: (v) => v.toLocaleString('en-IN') },
     { key: 'clickConversions', label: 'Click Conversions', render: (v) => v.toLocaleString('en-IN') },
     { key: 'conversions', label: 'Conversions' },
-    { key: 'commission', label: 'Commission Earned', render: (v) => `${ORG.currencySymbol} ${v.toLocaleString('en-IN')}` },
+    {
+      key: 'commission', label: 'Commission Earned',
+      render: (v) =>
+        v == null
+          ? <span className="text-slate-300" title="Not loaded">&mdash;</span>
+          : `${ORG.currencySymbol} ${v.toLocaleString('en-IN')}`,
+    },
     {
       key: '_actions', label: '', align: 'right',
       render: (_v, row) => (
