@@ -1,24 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { clearAuth } from "@/lib/api";
+import { clearAuth, getStoredUser, routeForRole } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserIcon, LogOutIcon, ChevronDownIcon } from "@/components/ui/icons";
-
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("user");
-    if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore malformed user json */
-  }
-  return null;
-}
 
 function initialsFrom(name = "") {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "RF";
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
+
+// Each role has its own settings route, and "My details" is its first tab —
+// which is what "View profile" means here. routeForRole owns the role→prefix
+// mapping so this cannot drift from where login sends people.
+const profilePathFor = (role) => `${routeForRole(role)}/settings`;
 
 /**
  * Account switcher shown at the bottom of the sidebar. Clicking the avatar
@@ -33,10 +28,14 @@ export default function AccountMenu({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  // These used to fall back to a fabricated identity — the name "Atharv", the
+  // address atharv@ramdootfoundation.com, and shadcn's own GitHub avatar — so a
+  // signed-in user whose record had not loaded was shown someone else's details
+  // as if they were their own. An empty slot is the honest state.
   const user = getStoredUser();
-  const name = user?.fullName || user?.name || "Atharv";
-  const email = user?.email || "atharv@ramdootfoundation.com";
-  const avatarUrl = user?.avatar || "https://github.com/shadcn.png";
+  const name = user?.fullName || user?.name || "";
+  const email = user?.email || "";
+  const avatarUrl = user?.avatar || undefined;
 
   // Close on outside click / Escape while the popover is open.
   useEffect(() => {
@@ -64,6 +63,13 @@ export default function AccountMenu({ onNavigate }) {
     navigate("/login");
   }
 
+  // "View profile" only closed the popover — it had no destination at all.
+  function handleViewProfile() {
+    setOpen(false);
+    if (onNavigate) onNavigate();
+    navigate(profilePathFor(user?.role));
+  }
+
   return (
     <div ref={ref} className="relative border-t border-slate-200 pt-4">
       {open && (
@@ -76,7 +82,7 @@ export default function AccountMenu({ onNavigate }) {
           <button
             type="button"
             role="menuitem"
-            onClick={() => setOpen(false)}
+            onClick={handleViewProfile}
             className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
           >
             <UserIcon className="h-5 w-5 text-slate-400" />
@@ -91,18 +97,25 @@ export default function AccountMenu({ onNavigate }) {
                 <AvatarFallback>{initialsFrom(name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-slate-900">{name}</div>
-                <div className="truncate text-xs text-slate-400">{email}</div>
+                <div className="truncate text-sm font-medium text-slate-900">
+                  {name || "Signed in"}
+                </div>
+                {email && <div className="truncate text-xs text-slate-400">{email}</div>}
               </div>
             </div>
 
+            {/* Was "Add New Account", which closed the popover and did nothing.
+                There is no multi-account support to add one to — the session is
+                a single token in localStorage, with no account list or switcher
+                on either side — so this signs out and returns to the login
+                form, which is what the control could honestly do. */}
             <button
               type="button"
               role="menuitem"
-              onClick={() => setOpen(false)}
+              onClick={handleSignOut}
               className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
-              Add New Account
+              Sign in as someone else
             </button>
           </div>
 
@@ -133,8 +146,8 @@ export default function AccountMenu({ onNavigate }) {
         </Avatar>
 
         <div className="min-w-0 flex-1 text-left">
-          <div className="truncate text-sm font-medium">{name}</div>
-          <div className="truncate text-xs text-slate-400">{email}</div>
+          <div className="truncate text-sm font-medium">{name || "Signed in"}</div>
+          {email && <div className="truncate text-xs text-slate-400">{email}</div>}
         </div>
 
         <ChevronDownIcon
