@@ -237,6 +237,11 @@ export function toMagazineCard(m) {
     image: cover,
     price: Number(m.price ?? 0),
     status: m.status,
+    // Whether a readable file exists. The card needs this to decide between
+    // offering "Read" and saying there is nothing to read — without it the
+    // admin catalogue offered a Read button on the four magazines that have
+    // no PDF, which failed only after a round trip.
+    hasPdf: Boolean(m.pdfUrl),
   };
 }
 

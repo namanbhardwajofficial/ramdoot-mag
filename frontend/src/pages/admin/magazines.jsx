@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Card from "@/components/card";
 import { useLoaderData } from "react-router";
+import PdfReader from "@/components/reader/PdfReader";
 import { sortRows } from "@/lib/sort";
+import { magazinesApi } from "@/lib/api";
 import { PUBLICATION_STATUSES } from "@/config/constants";
 
 const SORTS = [
@@ -21,6 +23,29 @@ export default function Magazines({ handleBuy, loading, message }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("");
+  // The magazine currently open in the reader, and the failure from trying to
+  // open one. "View Magazine" was passed no handler at all, so clicking it did
+  // nothing — the card was given an `onBuy` prop that Card does not accept.
+  const [openMag, setOpenMag] = useState(null);
+  const [openError, setOpenError] = useState("");
+
+  // Admins bypass the subscription check on this endpoint, so the only expected
+  // failures here are "no PDF uploaded" (400) and a genuine server error.
+  const loadPdfUrl = useCallback(async () => {
+    const res = await magazinesApi.read(openMag.id);
+    const href = res?.url || res?.pdfUrl;
+    if (!href) throw new Error("This magazine has no readable file yet.");
+    return href;
+  }, [openMag]);
+
+  async function handleView(m) {
+    setOpenError("");
+    if (!m.hasPdf) {
+      setOpenError(`"${m.title}" has no PDF uploaded yet.`);
+      return;
+    }
+    setOpenMag(m);
+  }
 
   const q = search.trim().toLowerCase();
   const visible = sortRows(
@@ -33,6 +58,16 @@ export default function Magazines({ handleBuy, loading, message }) {
     ),
     sort,
   );
+
+  if (openMag) {
+    return (
+      <PdfReader
+        loadUrl={loadPdfUrl}
+        title={openMag.title}
+        onClose={() => setOpenMag(null)}
+      />
+    );
+  }
 
   return (
     <>
@@ -91,6 +126,15 @@ export default function Magazines({ handleBuy, loading, message }) {
         </div>
       </header>
 
+      {openError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {openError}
+        </p>
+      )}
+
       {visible.length === 0 ? (
         <p className="py-12 text-center text-sm text-slate-400">
           No magazines match this search.
@@ -104,7 +148,8 @@ export default function Magazines({ handleBuy, loading, message }) {
               description={m.description}
               image={m.image}
               price={m.price}
-              onBuy={() => handleBuy(m)}
+              hasPdf={m.hasPdf}
+              handleViewClick={() => handleView(m)}
               loading={loading}
             />
           ))}

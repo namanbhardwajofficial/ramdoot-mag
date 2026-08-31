@@ -5,6 +5,9 @@ export default function Card({
   description = "",
   image,
   handleViewClick,
+  // Most of the catalogue has no PDF yet, so the button is only offered when
+  // there is actually something to open.
+  hasPdf = true,
   className = "",
   ...props
 }) {
@@ -30,7 +33,11 @@ export default function Card({
         </p>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3">
-          <Button handler={handleViewClick} text="View Magazine" />
+          {hasPdf ? (
+            <Button handler={handleViewClick} text="Read Magazine" />
+          ) : (
+            <span className="text-sm text-slate-400">No PDF uploaded yet</span>
+          )}
         </div>
       </div>
     </article>
