@@ -1,0 +1,13 @@
+# Only the landing page is public. Everything else needs a signed-in session,
+# so a crawler that follows those paths gets bounced to /login and burns crawl
+# budget on a page that will never rank.
+User-agent: *
+Allow: /$
+Disallow: /admin
+Disallow: /influencer
+Disallow: /user
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
+Sitemap: https://ramdootrestores.in/sitemap.xml

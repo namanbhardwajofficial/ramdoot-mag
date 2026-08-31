@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One entry, because the app has exactly one public URL. Every other route is
+  behind an auth guard. Magazine detail pages are not listed: they render
+  client-side behind a login, so a crawler would only ever see an empty shell.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ramdootrestores.in/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

@@ -3,7 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDF Selling Platform</title>
+
+    <!-- The title was "PDF Selling Platform", a description of the software
+         rather than the thing being offered — it named neither the foundation
+         nor the magazines, so a search result gave a reader nothing to
+         recognise. -->
+    <title>Ramdoot Foundation — Magazines on real Indian history</title>
+    <meta
+      name="description"
+      content="Subscribe to Ramdoot Foundation's magazines on Hindu heritage, Vedic sciences and the festivals of India. Read every issue in your browser, on any device."
+    />
+    <link rel="canonical" href="https://ramdootrestores.in/" />
+    <meta name="theme-color" content="#1e293b" />
+
+    <!-- Only the landing page is meant for search engines. Everything behind
+         /admin, /user and /influencer is private and needs a signed-in session,
+         so a crawler there gets a login redirect; robots.txt keeps them out. -->
+    <meta name="robots" content="index, follow" />
+
+    <!-- Link previews (WhatsApp, X, Slack). Without these a shared link shows
+         the bare URL, which matters because sharing is how influencers drive
+         signups. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ramdoot Foundation" />
+    <meta property="og:title" content="Ramdoot Foundation — Magazines on real Indian history" />
+    <meta
+      property="og:description"
+      content="Subscribe to magazines on Hindu heritage, Vedic sciences and the festivals of India. Read every issue in your browser."
+    />
+    <meta property="og:url" content="https://ramdootrestores.in/" />
+    <meta property="og:image" content="https://ramdootrestores.in/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ramdoot Foundation — Magazines on real Indian history" />
+    <meta
+      name="twitter:description"
+      content="Subscribe to magazines on Hindu heritage, Vedic sciences and the festivals of India."
+    />
+    <meta name="twitter:image" content="https://ramdootrestores.in/og-image.jpg" />
+
+    <!-- There was no favicon at all, so every page load 404'd on /favicon.ico
+         and tabs showed a blank sheet. SVG for modern browsers, PNG for Safari
+         and the iOS home screen. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- Preload the hero heading font (Delight Medium) so LCP text isn't delayed -->
     <link rel="preload" href="/fonts/delight-medium.woff2" as="font" type="font/woff2" crossorigin />
     <link href="/src/index.css" rel="stylesheet">

@@ -19,7 +19,7 @@ export default function Card({
       {/* Responsive image heights: small screens shorter, larger screens taller */}
       <div className="bg-slate-200 w-full h-40 sm:h-48 md:h-56 lg:h-64 rounded-2xl overflow-hidden">
         {image ? (
-          <img src={image} alt={title} className="w-full h-full object-cover" />
+          <img src={image} alt={title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-slate-200" />
         )}

@@ -23,7 +23,7 @@ function Thumb({ image, title, className = "" }) {
   return (
     <div className={`bg-slate-200 overflow-hidden ${className}`}>
       {image ? (
-        <img src={image} alt={title} className="h-full w-full object-cover" />
+        <img src={image} alt={title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
       ) : null}
     </div>
   );

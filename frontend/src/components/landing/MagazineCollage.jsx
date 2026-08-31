@@ -5,9 +5,13 @@ export default function MagazineCollage() {
   return (
     <section className="px-5 pb-16 md:pb-24">
       <div className="relative mx-auto max-w-[1000px]">
+        {/* Below the fold — lazy so it does not compete with the hero for
+            bandwidth during the initial paint. */}
         <img
           src={collage}
           alt="Ramdoot magazine editions"
+          loading="lazy"
+          decoding="async"
           className="w-full [mask-image:linear-gradient(to_bottom,black_55%,transparent_98%)] [-webkit-mask-image:linear-gradient(to_bottom,black_55%,transparent_98%)]"
         />
         {/* Subscribe pill overlapping the faded bottom of the collage */}
