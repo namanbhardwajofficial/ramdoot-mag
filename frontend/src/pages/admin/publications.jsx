@@ -58,7 +58,6 @@ export default function Publications() {
     fetchAll,
     publish,
     update,
-    deactivate,
     remove,
   } = usePublications();
 
@@ -84,8 +83,15 @@ export default function Publications() {
   async function handlePublish(form) {
     try {
       const pub = await publish(form);
-      setSuccessModal(pub.shareLink);
       setView(VIEWS.DASHBOARD);
+      // A draft has no share link, and `setSuccessModal(undefined)` would leave
+      // the modal closed — the upload would have succeeded with no feedback at
+      // all. Confirm it with a toast instead.
+      if (form.publishNow === false) {
+        toastSuccess("Saved as draft. Publish it from the magazine's Actions tab.");
+      } else {
+        setSuccessModal(pub.shareLink);
+      }
     } catch (err) {
       toastError(err.message || "Could not publish magazine");
     }
@@ -103,13 +109,16 @@ export default function Publications() {
     }
   }
 
-  async function handleDeactivate() {
+  // Replaces handleDeactivate, which could only ever move a magazine to PAUSED.
+  // Errors are rethrown, not toasted away: StatusControl keeps its confirm step
+  // open and shows the backend's message, so a failed change never looks like a
+  // successful one. The drawer's copy of the row is refreshed from the list
+  // that `update` refetches, so the select reflects what actually saved.
+  async function handleStatusChange(nextStatus) {
     if (!selectedPub) return;
-    try {
-      await deactivate(selectedPub.id);
-    } catch (err) {
-      toastError(err.message || "Could not deactivate magazine");
-    }
+    await update(selectedPub.id, { status: nextStatus });
+    setSelectedPub((p) => (p ? { ...p, status: nextStatus } : p));
+    toastSuccess(`Magazine moved to ${nextStatus}`);
   }
 
   async function handleUpdate(form) {
@@ -287,7 +296,7 @@ export default function Publications() {
             setShowDetails(false);
             setSelectedPub(null);
           }}
-          onDeactivate={handleDeactivate}
+          onStatusChange={handleStatusChange}
         />
         <DeleteMagazineDrawer
           open={showDelete}
@@ -403,7 +412,7 @@ export default function Publications() {
           setShowDetails(false);
           setSelectedPub(null);
         }}
-        onDeactivate={handleDeactivate}
+        onStatusChange={handleStatusChange}
       />
       <DeleteMagazineDrawer
         open={showDelete}

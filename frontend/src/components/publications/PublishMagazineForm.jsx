@@ -115,6 +115,10 @@ export default function PublishMagazineForm({ onPublish, onCancel }) {
     pricingPlan: 'paid',
     price: 49,
     sendNotification: true,
+    // This flow always went straight to LIVE — there was no way to upload a
+    // magazine without publishing it to every reader in the same click, even
+    // though DRAFT is the status most of the catalogue actually sits in.
+    publishNow: true,
   });
 
   function update(field, value) {
@@ -239,25 +243,62 @@ export default function PublishMagazineForm({ onPublish, onCancel }) {
                 </div>
               )}
 
-              <label className="flex items-start gap-3 mb-6 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.sendNotification}
-                  onChange={(e) => update('sendNotification', e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300"
-                />
-                <div>
-                  <p className="text-sm font-medium">Send Notification</p>
-                  <p className="text-xs text-slate-400">After Publishing this will send notification to current paid users</p>
-                </div>
-              </label>
+              {/* Publish now, or park it as a draft. Uploading and publishing
+                  used to be the same irreversible click. */}
+              <fieldset className="mb-4">
+                <legend className="text-sm font-medium mb-2">When to publish</legend>
+                <label className="flex items-start gap-3 mb-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="publishNow"
+                    checked={form.publishNow}
+                    onChange={() => update('publishNow', true)}
+                    className="mt-0.5 w-4 h-4 border-slate-300"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Publish now</p>
+                    <p className="text-xs text-slate-400">Goes live immediately for readers whose plan includes it.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="publishNow"
+                    checked={!form.publishNow}
+                    onChange={() => update('publishNow', false)}
+                    className="mt-0.5 w-4 h-4 border-slate-300"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Save as draft</p>
+                    <p className="text-xs text-slate-400">Uploads the file but keeps it hidden. Publish it later from the magazine&apos;s Actions tab.</p>
+                  </div>
+                </label>
+              </fieldset>
+
+              {/* Notifying subscribers only means anything when it goes live. */}
+              {form.publishNow && (
+                <label className="flex items-start gap-3 mb-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.sendNotification}
+                    onChange={(e) => update('sendNotification', e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-slate-300"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Send Notification</p>
+                    <p className="text-xs text-slate-400">After Publishing this will send notification to current paid users</p>
+                  </div>
+                </label>
+              )}
 
               <button
                 onClick={handlePublish}
                 disabled={publishing}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {publishing ? 'Publishing…' : 'Publish Magazine'}
+                {publishing
+                  ? form.publishNow ? 'Publishing…' : 'Saving…'
+                  : form.publishNow ? 'Publish Magazine' : 'Save as Draft'}
                 {!publishing && (
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

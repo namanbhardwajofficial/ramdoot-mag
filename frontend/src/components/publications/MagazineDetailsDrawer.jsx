@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Drawer from '@/components/ui/drawer';
-import StatusBanner from '@/components/ui/status-banner';
+import StatusControl from '@/components/publications/StatusControl';
 import { ORG } from '@/config/constants';
 import { CHART_COLORS } from '@/config/theme';
 import { magazinesApi } from '@/lib/api';
@@ -202,41 +202,26 @@ function FinancialsTab({ magazineId }) {
   );
 }
 
-function ActionsTab({ pub, onDeactivate }) {
-  const [done, setDone] = useState(false);
-
-  function handleDeactivate() {
-    onDeactivate();
-    setDone(true);
-  }
-
-  if (done) {
-    return (
-      <StatusBanner
-        variant="success"
-        title="Successfully Deactivated"
-        description="Deactivate the current magazine for all subscriber."
-      />
-    );
-  }
-
+function ActionsTab({ pub, onStatusChange }) {
   return (
     <>
-      <StatusBanner
-        variant="warning"
-        title="Important Notice"
-        description="This action cannot be reversed."
-      />
+      {/* The status control replaces a lone "Deactivate" button. Deactivating
+          is just one of these moves (to Paused), and it was the only one the
+          UI offered — a magazine published by mistake could not be pulled back. */}
+      <div className="mb-6">
+        <StatusControl status={pub.status} onChange={onStatusChange} />
+      </div>
 
       <div className="mb-6">
         <h3 className="text-sm font-semibold mb-2">Please Note</h3>
         <p className="text-xs text-slate-500 leading-relaxed">
-          Deactivating this pricing will make the magazine unavailable for new
-          purchases and subscriptions. Existing subscribers will continue to have
-          access until their current subscription period ends.
+          Pausing a magazine makes it unavailable for new purchases and
+          subscriptions. Existing subscribers keep access until their current
+          subscription period ends.
         </p>
         <p className="text-xs text-slate-500 leading-relaxed mt-2">
-          This action does not delete the magazine and can be reversed at any time.
+          None of these change deletes the magazine, and each one can be
+          reversed by choosing another status.
         </p>
       </div>
     </>
@@ -245,7 +230,7 @@ function ActionsTab({ pub, onDeactivate }) {
 
 const TAB_LIST = ['Overview', 'Performance', 'Financials', 'Actions'];
 
-export default function MagazineDetailsDrawer({ open, publication, onClose, onDeactivate }) {
+export default function MagazineDetailsDrawer({ open, publication, onClose, onStatusChange }) {
   const [tab, setTab] = useState('Overview');
 
   if (!publication) return null;
@@ -255,7 +240,7 @@ export default function MagazineDetailsDrawer({ open, publication, onClose, onDe
       case 'Overview':    return <OverviewTab pub={publication} />;
       case 'Performance': return <PerformanceTab magazineId={publication.id} />;
       case 'Financials':  return <FinancialsTab magazineId={publication.id} />;
-      case 'Actions':     return <ActionsTab pub={publication} onDeactivate={onDeactivate} />;
+      case 'Actions':     return <ActionsTab pub={publication} onStatusChange={onStatusChange} />;
       default:            return null;
     }
   }
@@ -266,14 +251,14 @@ export default function MagazineDetailsDrawer({ open, publication, onClose, onDe
       onClose={onClose}
       title="Magazine Details"
       footer={
+        // The footer used to fire Deactivate from the Actions tab, duplicating
+        // the button inside it — and doing it without confirmation. Status
+        // changes now live only in the tab, behind their own confirm step.
         <button
-          onClick={tab === 'Actions' ? onDeactivate : onClose}
+          onClick={onClose}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800"
         >
-          {tab === 'Actions' ? 'Deactivate Magazine' : 'Go Home'}
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          Close
         </button>
       }
     >

@@ -91,7 +91,16 @@ export default function usePublications() {
       const files = [form.pdfFile, form.coverFile].filter(Boolean);
       if (files.length) await magazinesApi.upload(created.id, files);
 
-      // 3. Publish it, optionally notifying paid subscribers.
+      // 3. Publish it, optionally notifying paid subscribers — unless the
+      //    author chose to save a draft, in which case the magazine is left in
+      //    whatever status POST /magazines created it with and can be published
+      //    later from the details drawer. `publishNow` defaults to true so any
+      //    caller that predates the choice behaves as it did.
+      if (form.publishNow === false) {
+        await fetchAll();
+        return created;
+      }
+
       const published = await magazinesApi.publish(created.id, {
         notifySubscribers: !!form.sendNotification,
       });
@@ -117,14 +126,8 @@ export default function usePublications() {
     [fetchAll],
   );
 
-  const deactivate = useCallback(
-    async (id) => {
-      const pub = await magazinesApi.update(id, { status: 'PAUSED' });
-      await fetchAll();
-      return pub;
-    },
-    [fetchAll],
-  );
+  // `deactivate` is gone: it was `update(id, { status: 'PAUSED' })` behind a
+  // second name, and the admin UI now sets any status through one control.
 
   // No hard-delete endpoint; archive instead.
   const remove = useCallback(
@@ -137,5 +140,5 @@ export default function usePublications() {
 
   const getVersions = useCallback(async () => [], []);
 
-  return { publications, stats, loading, error, init, fetchAll, publish, update, deactivate, remove, getVersions };
+  return { publications, stats, loading, error, init, fetchAll, publish, update, remove, getVersions };
 }
