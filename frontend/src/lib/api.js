@@ -105,7 +105,15 @@ async function request(path, { method = 'GET', body, token, _skipRefresh = false
       Array.isArray(details) && details.length
         ? details.join('; ')
         : json?.message || `Request failed (${res.status})`;
-    throw new Error(message);
+    // Carry the HTTP status on the error. Callers that must tell one failure
+    // from another need it: GET /magazines/:id/read answers 403 when the plan
+    // does not cover the magazine and 400 when no PDF has been uploaded, and
+    // those two want completely different UI. Matching on message text would
+    // break the moment the backend rewords a string.
+    const err = new Error(message);
+    err.status = res.status;
+    err.code = json?.error?.code;
+    throw err;
   }
 
   // Unwrap the standard { success, message, data } envelope.

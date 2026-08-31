@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import Button from "@/components/Button.jsx";
+import PdfReader from "@/components/reader/PdfReader";
 import { magazinesApi, MAGAZINE_PLACEHOLDER } from "@/lib/api";
 import { API_ORIGIN, ORG } from "@/config/constants";
 
@@ -18,6 +19,10 @@ export default function MagazineDetail() {
   const [error, setError] = useState("");
   const [opening, setOpening] = useState(false);
   const [readError, setReadError] = useState("");
+  // A 403 means the plan does not cover this magazine — a different situation
+  // from a broken request, and the only one worth offering an upgrade for.
+  const [notInPlan, setNotInPlan] = useState(false);
+  const [reading, setReading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -32,30 +37,44 @@ export default function MagazineDetail() {
   }, [id]);
 
   /**
-   * "Read Magazine" used to be a plain <a> straight to `pdfUrl`, which meant
-   * `GET /magazines/:id/read` was never called and `readsCount` never moved —
-   * which is why every magazine's Performance tab reports 0 reads. The endpoint
-   * resolves the PDF *and* records the read, so it has to be the way in.
+   * Fetch a fresh presigned URL for the reader.
    *
-   * The window is opened before the await: a `window.open` that happens after
-   * an async hop is not attributable to the click any more and gets blocked as
-   * a popup. So we open it first and then point it at whatever comes back.
+   * `GET /magazines/:id/read` returns `{ url, title, expiresIn }` — a presigned
+   * S3 link valid for 900s — and records the read. It is the only way in: the
+   * page used to link straight at `pdfUrl`, so the endpoint never ran and
+   * `readsCount` never moved, which is why every Performance tab showed 0 reads.
+   *
+   * This is passed to PdfReader as a function, not a string, so the reader can
+   * re-presign when a long reading session outlives the 900s window.
+   */
+  const loadPdfUrl = useCallback(async () => {
+    const res = await magazinesApi.read(id);
+    // `pdfUrl` is the pre-S3 field name; kept as a fallback so the reader still
+    // works if a stale backend build is deployed.
+    const href = res?.url || res?.pdfUrl;
+    if (!href) throw new Error("This magazine has no readable file yet.");
+    // Presigned S3 links are absolute; only a legacy relative path needs the
+    // API origin prepended.
+    return href.startsWith("http") ? href : asset(href);
+  }, [id]);
+
+  /**
+   * Open the reader. The URL is fetched once up front rather than inside the
+   * reader so that an auth or subscription failure lands on this page, where
+   * there is somewhere useful to send the user — showing a 403 inside a
+   * full-screen black reader would be a dead end.
    */
   async function handleRead() {
     if (opening) return;
     setOpening(true);
     setReadError("");
-    const tab = window.open("", "_blank", "noopener,noreferrer");
+    setNotInPlan(false);
     try {
-      const res = await magazinesApi.read(id);
-      // Fall back to the record's own pdfUrl if the endpoint answers without one.
-      const href = asset(res?.pdfUrl || res?.url) || asset(mag?.pdfUrl);
-      if (!href) throw new Error("This magazine has no readable file yet.");
-      if (tab) tab.location = href;
-      else window.location.assign(href);
+      await loadPdfUrl();
+      setReading(true);
     } catch (err) {
-      if (tab) tab.close();
-      setReadError(err.message || "Could not open this magazine.");
+      if (err.status === 403) setNotInPlan(true);
+      else setReadError(err.message || "Could not open this magazine.");
     } finally {
       setOpening(false);
     }
@@ -71,6 +90,16 @@ export default function MagazineDetail() {
   const cover = asset(mag.coverImageUrl) || MAGAZINE_PLACEHOLDER;
   const pdfHref = asset(mag.pdfUrl);
   const price = Number(mag.price ?? 0);
+
+  if (reading) {
+    return (
+      <PdfReader
+        loadUrl={loadPdfUrl}
+        title={mag.title}
+        onClose={() => setReading(false)}
+      />
+    );
+  }
 
   return (
     <div>
@@ -104,6 +133,21 @@ export default function MagazineDetail() {
             {pdfHref ? (
               <>
                 <Button text="Read Magazine" handler={handleRead} loading={opening} />
+                {notInPlan && (
+                  <div
+                    role="alert"
+                    className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                  >
+                    This magazine isn&apos;t included in your current plan.{" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/user/subscriptions")}
+                      className="font-medium underline underline-offset-2"
+                    >
+                      See plans that include it
+                    </button>
+                  </div>
+                )}
                 {readError && <p className="mt-2 text-sm text-red-600">{readError}</p>}
               </>
             ) : (
