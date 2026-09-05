@@ -6,7 +6,6 @@ import AssuranceSection from '@/components/landing/AssuranceSection';
 import AboutUs from '@/components/landing/AboutUs';
 import AboutMagazine from '@/components/landing/AboutMagazine';
 import MissionVision from '@/components/landing/MissionVision';
-import MagazineVersions from '@/components/landing/MagazineVersions';
 import HowItWorks from '@/components/landing/HowItWorks';
 import AffiliateProgram from '@/components/landing/AffiliateProgram';
 import WhyBuy from '@/components/landing/WhyBuy';
@@ -24,7 +23,6 @@ export default function Landing() {
       <AboutUs />
       <AboutMagazine />
       <MissionVision />
-      <MagazineVersions />
       <HowItWorks />
       <AffiliateProgram />
       <WhyBuy />

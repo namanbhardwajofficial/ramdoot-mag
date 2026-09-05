@@ -1,4 +1,5 @@
 import { FileTextIcon, CreditCardIcon, PhoneIcon } from '@/components/ui/icons';
+import LandingImage from '@/components/landing/LandingImage';
 
 const STEPS = [
   { icon: FileTextIcon, label: ['Choose Your', 'Favourite Magazine'] },
@@ -50,8 +51,16 @@ export default function HowItWorks() {
 
         {/* Showcase images */}
         <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-[2fr_1fr]">
-          <div className="h-[280px] rounded-2xl bg-[#d9d7d8] md:h-[450px]" />
-          <div className="h-[280px] rounded-2xl bg-[#d9d7d8] md:h-[450px]" />
+          <LandingImage
+            name="how-it-works-wide"
+            alt="A reader with an open Ramdoot magazine"
+            className="h-[280px] rounded-2xl md:h-[450px]"
+          />
+          <LandingImage
+            name="how-it-works-tall"
+            alt="Magazine pages showing historical photographs"
+            className="h-[280px] rounded-2xl md:h-[450px]"
+          />
         </div>
       </div>
     </section>

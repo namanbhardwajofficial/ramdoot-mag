@@ -1,4 +1,5 @@
 import TwoColSection from '@/components/landing/TwoColSection';
+import LandingImage from '@/components/landing/LandingImage';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { ORG } from '@/config/constants';
 
@@ -20,11 +21,12 @@ const STATUS = {
   },
 };
 
+// `image` entries carry the filename in src/assets/landing/ that fills them.
 const TIMELINE = [
   { type: 'project', title: 'Ramdoot Restore Project 1', status: 'ongoing' },
-  { type: 'image' },
+  { type: 'image', image: 'about-project-1', alt: 'Restoration work at a temple site' },
   { type: 'project', title: 'Ramdoot Restore Project 1', status: 'ongoing' },
-  { type: 'image' },
+  { type: 'image', image: 'about-project-2', alt: 'Carved stonework being restored' },
   { type: 'project', title: 'Ramdoot Restore Project 1', status: 'planned' },
 ];
 
@@ -93,7 +95,11 @@ export default function AboutUs() {
                   </a>
                 </>
               ) : (
-                <div className="h-[150px] w-full rounded-2xl bg-[#d9d7d8] sm:h-[170px]" />
+                <LandingImage
+                  name={item.image}
+                  alt={item.alt}
+                  className="h-[150px] w-full rounded-2xl sm:h-[170px]"
+                />
               )}
             </div>
           </div>
