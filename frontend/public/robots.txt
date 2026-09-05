@@ -10,4 +10,4 @@ Disallow: /login
 Disallow: /signup
 Disallow: /forgot-password
 
-Sitemap: https://ramdootrestores.in/sitemap.xml
+Sitemap: https://ramdootmag.com/sitemap.xml

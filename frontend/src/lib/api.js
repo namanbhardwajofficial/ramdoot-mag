@@ -14,12 +14,16 @@ export const API_BASE = `${API_ORIGIN}/api/v1`;
 
 // Public promo-tracking link an influencer shares. Hitting it records a click
 // (GET /track/:promoCode) — optional `medium` tags where it was shared.
-// `track/:promoCode` is in the `exclude` list of setGlobalPrefix, so it skips the
-// `api` prefix — but URI versioning STILL injects the version segment, so the
-// live path is `/v1/track/:code` (verified 2026-08-10; `/track/:code` 404s).
-// Same story for `/v1/health`.
+//
+// The path is `/track/:code`, with no version segment. It used to be
+// `/v1/track/:code`: `track` is in the `exclude` list of setGlobalPrefix so it
+// skips the `api` prefix, but URI versioning still injected the version. That
+// changed — verified 2026-09-05 on both hosts, where `/track/ABC` answers
+// `{"valid":false}` and `/v1/track/ABC` 404s on the EC2 origin (and on the
+// domain serves this app's own index.html, since the SPA is deployed there).
+// Every promo link generated before this fix pointed at a dead URL.
 export const trackingUrl = (promoCode, medium) =>
-  `${BACKEND_URL}/v1/track/${promoCode}${medium ? `?medium=${encodeURIComponent(medium)}` : ''}`;
+  `${BACKEND_URL}/track/${promoCode}${medium ? `?medium=${encodeURIComponent(medium)}` : ''}`;
 
 // Single-flight refresh: concurrent 401s share one in-flight refresh call.
 // The backend ROTATES refresh tokens (it revokes the old one on each use), so

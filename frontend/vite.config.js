@@ -10,7 +10,11 @@ import path from "path";
 // a same-origin request to localhost:3001 and Vite forwards it server-side,
 // where CORS does not apply. `src/config/constants.js` blanks out the API
 // origin in dev so the API client emits these relative paths.
-const PROXIED_PREFIXES = ["/api", "/v1", "/uploads"];
+// `/track` replaced `/v1` here: the promo-tracking route moved from
+// `/v1/track/:code` to `/track/:code`. `/v1` is deliberately NOT proxied any
+// more — on the production domain that path serves this app's own index.html,
+// so proxying it in dev would hide a broken link rather than surface it.
+const PROXIED_PREFIXES = ["/api", "/track", "/uploads"];
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
