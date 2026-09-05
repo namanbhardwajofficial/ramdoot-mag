@@ -25,8 +25,11 @@ function PromoCard({ title, cta, image }) {
       overlay={false}
       className="flex min-h-[360px] flex-col justify-between rounded-2xl p-8 md:min-h-[450px]"
     >
-      {/* gradient for text legibility over imagery */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+      {/* Gradient for text legibility. Weighted hard to the bottom, where the
+          body copy and CTA sit: at from-black/70 the paragraph was still
+          fighting bright cloth in the photograph. The top stop stays light so
+          the picture is not flattened behind the heading. */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
 
       <h3 className="relative font-['Delight'] font-medium leading-tight tracking-[-0.01em] text-white text-2xl sm:text-3xl">
         {title}
@@ -59,7 +62,7 @@ export default function WhyBuy() {
         </div>
 
         {/* First promo */}
-        <PromoCard title={PROMOS[0].title} cta={PROMOS[0].cta} />
+        <PromoCard title={PROMOS[0].title} cta={PROMOS[0].cta} image={PROMOS[0].image} />
 
         {/* Full-width feature image */}
         <LandingImage
@@ -69,8 +72,8 @@ export default function WhyBuy() {
         />
 
         {/* Remaining promos */}
-        <PromoCard title={PROMOS[1].title} cta={PROMOS[1].cta} />
-        <PromoCard title={PROMOS[2].title} cta={PROMOS[2].cta} />
+        <PromoCard title={PROMOS[1].title} cta={PROMOS[1].cta} image={PROMOS[1].image} />
+        <PromoCard title={PROMOS[2].title} cta={PROMOS[2].cta} image={PROMOS[2].image} />
       </div>
     </section>
   );

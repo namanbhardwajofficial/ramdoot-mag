@@ -7,16 +7,21 @@ code change needed. `LandingImage` finds it by basename, so `.webp`, `.jpg`,
 A slot with no file shows the flat grey block the layout used before, so a
 missing image degrades to the old placeholder rather than a broken-image icon.
 
-| Filename | Where it appears | Shape | Suggested size |
-|---|---|---|---|
-| `about-project-1` | About Us → timeline, first image row | wide, short | 800 × 400 |
-| `about-project-2` | About Us → timeline, second image row | wide, short | 800 × 400 |
-| `how-it-works-wide` | How It Works → large left panel | landscape | 1400 × 900 |
-| `how-it-works-tall` | How It Works → narrow right panel | portrait-ish | 700 × 900 |
-| `why-buy-feature` | Why Buy → full-width band | wide banner | 1600 × 900 |
-| `promo-temple` | Why Buy → "Temple Restoration" card | portrait | 900 × 1100 |
-| `promo-gauseva` | Why Buy → "Feed Animals Do Gau Seva" card | portrait | 900 × 1100 |
-| `promo-roots` | Why Buy → "Supporting your roots" card | portrait | 900 × 1100 |
+| Filename | Where it appears | Shape | Suggested size | Status |
+|---|---|---|---|---|
+| `about-project-1` | About Us → timeline, first image row | wide, short | 800 × 400 | ✅ filled |
+| `about-project-2` | About Us → timeline, second image row | wide, short | 800 × 400 | **needed** |
+| `how-it-works-wide` | How It Works → large left panel | landscape | 1400 × 900 | ✅ filled |
+| `how-it-works-tall` | How It Works → narrow right panel | portrait-ish | 700 × 900 | **needed** |
+| `why-buy-feature` | Why Buy → full-width band | wide banner | 1600 × 900 | ✅ filled |
+| `promo-temple` | Why Buy → "Temple Restoration" card | portrait | 900 × 1100 | **needed** |
+| `promo-gauseva` | Why Buy → "Feed Animals Do Gau Seva" card | portrait | 900 × 1100 | **needed** |
+| `promo-roots` | Why Buy → "Supporting your roots" card | portrait | 900 × 1100 | ✅ filled |
+
+The four filled slots are all crops of the same source photograph
+(`design/landing image-1.jpg`), placed far enough apart on the page that the
+repetition is not obvious. They are placeholders in spirit: each wants its own
+picture. Replace any of them by dropping a new file over the same name.
 
 Notes:
 
