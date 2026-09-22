@@ -57,7 +57,7 @@ export default function HowItWorks() {
             className="h-[280px] rounded-2xl md:h-[450px]"
           />
           <LandingImage
-            name="how-it-works-tall"
+            name="how-it-works-wide"
             alt="Magazine pages showing historical photographs"
             className="h-[280px] rounded-2xl md:h-[450px]"
           />

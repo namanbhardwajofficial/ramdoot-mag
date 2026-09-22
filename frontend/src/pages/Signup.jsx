@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import Logo from "@/components/Logo.jsx";
 import Button from "@/components/Button.jsx";
 import loginImg from '../assets/images/login_img.webp';
-import { FiHelpCircle, FiEye, FiRefreshCw, FiChevronDown, FiChevronLeft } from "react-icons/fi";
+import { FiHelpCircle, FiEye, FiEyeOff, FiRefreshCw, FiChevronDown, FiChevronLeft } from "react-icons/fi";
 import { authApi, saveAuth, routeForRole } from '@/lib/api';
 import { toastSuccess } from '@/lib/confirm';
 
@@ -22,6 +22,8 @@ const Signup = () => {
         confirmPassword: '',
         otp: ['', '', '', '', '', '']
     });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleNext = async () => {
         if (step === 2) {
@@ -241,13 +243,20 @@ const Signup = () => {
                                 <label className="text-sm lg:text-base font-medium">Password *</label>
                                 <div className="relative flex items-center">
                                     <input 
-                                        type="password" 
+                                        type={showPassword ? "text" : "password"} 
                                         value={formData.password}
                                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                                         className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
                                         placeholder="*********" 
                                     />
-                                    <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        className="absolute right-3 text-black/40 hover:text-black/70 text-lg cursor-pointer"
+                                    >
+                                        {showPassword ? <FiEyeOff /> : <FiEye />}
+                                    </button>
                                 </div>
                             </div>
                             
@@ -255,13 +264,20 @@ const Signup = () => {
                                 <label className="text-sm lg:text-base font-medium">Confirm Password *</label>
                                 <div className="relative flex items-center">
                                     <input 
-                                        type="password" 
+                                        type={showConfirmPassword ? "text" : "password"} 
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                                         className="border-black/10 border-[1px] p-3 lg:p-2 pr-10 rounded-lg shadow-sm w-full outline-none focus:border-black/30 transition-all text-sm lg:text-base" 
                                         placeholder="*********" 
                                     />
-                                    <FiEye className="absolute right-3 text-black/40 text-lg cursor-pointer" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                                        className="absolute right-3 text-black/40 hover:text-black/70 text-lg cursor-pointer"
+                                    >
+                                        {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                                    </button>
                                 </div>
                             </div>
                         </div>
